@@ -1,63 +1,42 @@
 package com.app.chat_service.config;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
-import org.springframework.web.socket.messaging.SessionConnectEvent;
-import org.springframework.web.socket.messaging.SessionDisconnectEvent;
+import org.springframework.web.socket.config.annotation.WebSocketTransportRegistration;
 
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-
+@Slf4j
 @Configuration
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
-    // Store online users
-    private static final Set<String> onlineUsers = ConcurrentHashMap.newKeySet();
-
     @Override
-    public void configureMessageBroker(MessageBrokerRegistry config) {
-        config.enableSimpleBroker("/topic", "/queue");
-        config.setApplicationDestinationPrefixes("/app");
+    public void configureMessageBroker(MessageBrokerRegistry registry) {
+        // Enable in-memory broker for topics and queues
+        registry.enableSimpleBroker("/topic", "/queue");
+
+        // Prefix for messages from client to server (@MessageMapping)
+        registry.setApplicationDestinationPrefixes("/app");
+
+        // Prefix required for convertAndSendToUser()
+        registry.setUserDestinationPrefix("/user");
+        log.info("WebSocket message broker configured: prefixes /app, /user, /topic, /queue");
     }
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
+        // Endpoint for client connections (SockJS optional)
         registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns("*")
-                .withSockJS();
+                .setHandshakeHandler(new CustomHandshakeHandler())
+                .setAllowedOrigins("*"); // consider restricting in production
+        log.info("WebSocket STOMP endpoint [/ws] registered");
     }
-
-    @EventListener
-    public void handleSessionConnected(SessionConnectEvent event) {
-        // You can extract userId from headers/authentication
-        String userId = extractUserId(event);
-        onlineUsers.add(userId);
-        System.out.println("User connected: " + userId);
-    }
-
-    @EventListener
-    public void handleSessionDisconnected(SessionDisconnectEvent event) {
-        String userId = extractUserId(event);
-        onlineUsers.remove(userId);
-        System.out.println("User disconnected: " + userId);
-    }
-
-    public static boolean isUserOnline(String userId) {
-        return onlineUsers.contains(userId);
-    }
-
-    private String extractUserId(SessionConnectEvent event) {
-        // TODO: Extract from headers or Principal
-        return "EMP001"; // For now static
-    }
-
-    private String extractUserId(SessionDisconnectEvent event) {
-        // TODO: Extract userId if available
-        return "EMP001";
+    
+    @Override
+    public void configureWebSocketTransport(WebSocketTransportRegistration registration) {
+        registration.setMessageSizeLimit(10 * 1024 * 1024); // 10 MB
     }
 }

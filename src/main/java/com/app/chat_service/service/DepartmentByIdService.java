@@ -52,6 +52,21 @@ public class DepartmentByIdService {
         }
     }
 
+    public boolean isEmployeeInDepartment(String employeeId, String deptId) {
+        ResponseEntity<EmployeeDepartmentDTO> response = getEmployeesByDeptId(deptId);
+
+        if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+            return false;
+        }
+
+        List<EmployeeTeamResponse> employees = response.getBody().getEmployeeList();
+
+        return employees.stream()
+            .map(EmployeeTeamResponse::getEmployeeId)
+            .collect(Collectors.toSet())
+            .contains(employeeId);
+    }
+
     public ResponseEntity<EmployeeDepartmentDTO> getDepartmentByEmployeeId(String employeeId) {
         // TODO implement if needed
         return null;

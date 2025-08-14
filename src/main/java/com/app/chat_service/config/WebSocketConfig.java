@@ -18,11 +18,12 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         // Enable in-memory broker for topics and queues
         registry.enableSimpleBroker("/topic", "/queue");
 
-        // Prefix for messages from client to server (@MessageMapping)
+        // Prefix for messages sent from client to server (@MessageMapping)
         registry.setApplicationDestinationPrefixes("/app");
 
         // Prefix required for convertAndSendToUser()
         registry.setUserDestinationPrefix("/user");
+
         log.info("WebSocket message broker configured: prefixes /app, /user, /topic, /queue");
     }
 
@@ -31,10 +32,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         // Endpoint for client connections (SockJS optional)
         registry.addEndpoint("/ws")
                 .setHandshakeHandler(new CustomHandshakeHandler())
-                .setAllowedOrigins("*"); // consider restricting in production
+                .setAllowedOriginPatterns("*"); // ✅ Recommended for Spring Boot 3+
         log.info("WebSocket STOMP endpoint [/ws] registered");
     }
-    
+
     @Override
     public void configureWebSocketTransport(WebSocketTransportRegistration registration) {
         registration.setMessageSizeLimit(10 * 1024 * 1024); // 10 MB

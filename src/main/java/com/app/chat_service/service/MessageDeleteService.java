@@ -1,14 +1,18 @@
 package com.app.chat_service.service;
  
-import com.app.chat_service.kakfa.ChatKafkaProducer;
+import com.app.chat_service.dto.DeleteNotificationDTO;
 import com.app.chat_service.model.ChatMessage;
+import com.app.chat_service.model.MessageAction;
 import com.app.chat_service.repo.ChatMessageRepository;
+import com.app.chat_service.repo.MessageActionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
  
 import java.util.NoSuchElementException;
+import java.util.Objects;
  
 @Slf4j
 @Service
@@ -16,66 +20,79 @@ import java.util.NoSuchElementException;
 public class MessageDeleteService {
  
     private final ChatMessageRepository chatMessageRepository;
-    private final ChatKafkaProducer chatKafkaProducer; // For real-time events via Kafka
+    private final MessageActionRepository messageActionRepository;
+    // private final ChatKafkaProducer chatKafkaProducer; // We will bypass Kafka for direct notification
+   
+    // *** BUG FIX: Injected SimpMessagingTemplate for direct WebSocket communication ***
+    private final SimpMessagingTemplate simpMessagingTemplate;
  
-    /**
-     * Hides a message for the user who requested it.
-     * This is now a "soft delete" that updates the message for everyone.
-     * This ensures consistency and that the message stays hidden on refresh.
-     */
     @Transactional
     public void deleteForMe(Long messageId, String userId) {
-        // For simplicity, "Delete for Me" will now behave like a soft "Delete for Everyone".
-        // This ensures the change is persistent and seen by all.
-        // The sender check is bypassed.
-        try {
-            this.deleteMessageForEveryone(messageId, userId, true);
-        } catch (IllegalAccessException e) {
-            // This exception won't be thrown when bypassSenderCheck is true
-            log.error("Unexpected access exception during deleteForMe", e);
-        }
+        log.info("Recording 'DELETE_FOR_ME' action for message ID {} by user {}", messageId, userId);
+       
+        chatMessageRepository.findById(messageId)
+                .orElseThrow(() -> new NoSuchElementException("Message not found with ID: " + messageId));
+ 
+        MessageAction action = MessageAction.builder()
+                .messageId(messageId)
+                .userId(userId)
+                .actionType("DELETE_ME")
+                .build();
+ 
+        messageActionRepository.save(action);
+        log.info("✅ Recorded 'DELETE_FOR_ME' action for message ID {} by user {}", messageId, userId);
     }
  
     /**
      * Deletes a message for everyone. This is a "soft delete".
-     * It updates the message content and broadcasts the change via Kafka.
+     * It updates the message state and broadcasts the change directly via WebSocket.
      */
     @Transactional
-    public void deleteForEveryone(Long messageId, String userId) throws IllegalAccessException {
-        this.deleteMessageForEveryone(messageId, userId, false);
-    }
+    public void deleteForEveryone(Long messageId, String userId) {
+        log.info("Message deleted for everyone. Message ID: {}, Requester: {}", messageId, userId);
  
-    /**
-     * Private helper method to handle the core logic for soft-deleting a message.
-     *
-     * @param messageId The ID of the message to delete.
-     * @param userId The ID of the user requesting the action.
-     * @param bypassSenderCheck If true, the check to see if the user is the sender is skipped.
-     */
-    private void deleteMessageForEveryone(Long messageId, String userId, boolean bypassSenderCheck) throws IllegalAccessException {
         ChatMessage message = chatMessageRepository.findById(messageId)
                 .orElseThrow(() -> new NoSuchElementException("Message not found with ID: " + messageId));
  
-        // Security Check: If not bypassing, ensure the requester is the sender.
-        if (!bypassSenderCheck && !message.getSender().equals(userId)) {
-            throw new IllegalAccessException("Only the sender can delete this message for everyone.");
+        // Security Check: Ensure the requester is the sender.
+        if (!Objects.equals(message.getSender(), userId)) {
+            log.warn("Unauthorized delete attempt for message ID {} by user {}", messageId, userId);
+            throw new IllegalStateException("Only the sender can delete this message for everyone.");
         }
  
-        // Update the message state to "deleted"
+        // 1. Update the message state for soft deletion
+        message.setDeleted(true);
         message.setContent("This message was deleted");
-        message.setType("DELETED"); // Use a specific type for the delete event
         message.setFileName(null);
         message.setFileType(null);
         message.setFileSize(null);
         message.setFileData(null);
+        chatMessageRepository.save(message);
+        log.info("✅ Soft deleted message ID: {}", messageId);
  
-        ChatMessage deletedMessage = chatMessageRepository.save(message);
-        log.info("Soft deleted message with ID: {}. Broadcasting change via Kafka.", messageId);
+        // 2. Create a notification payload for the frontend
+        DeleteNotificationDTO notification = DeleteNotificationDTO.builder()
+                .messageId(message.getId())
+                .isDeleted(true)
+                .type("deleted") // This type is crucial for the frontend to identify the action
+                .build();
  
-        // Broadcast the delete event via Kafka.
-        // The Kafka consumer will handle WebSocket broadcasting and sidebar updates.
-        chatKafkaProducer.send(deletedMessage);
+        // 3. Broadcast the notification to the correct destination
+        if ("TEAM".equalsIgnoreCase(message.getType()) && message.getGroupId() != null) {
+            notification.setGroupId(message.getGroupId());
+            String destination = "/topic/team-" + message.getGroupId();
+            simpMessagingTemplate.convertAndSend(destination, notification);
+            log.info("Sent delete notification to group topic: {}", destination);
+ 
+        } else if ("PRIVATE".equalsIgnoreCase(message.getType())) {
+            notification.setSender(message.getSender());
+            notification.setReceiver(message.getReceiver());
+           
+            // Send to the receiver's private queue
+            simpMessagingTemplate.convertAndSendToUser(message.getReceiver(), "/queue/private", notification);
+            // Send to the sender's private queue (to confirm deletion on their other devices)
+            simpMessagingTemplate.convertAndSendToUser(message.getSender(), "/queue/private", notification);
+            log.info("Sent delete notification to user queues for sender: {} and receiver: {}", message.getSender(), message.getReceiver());
+        }
     }
 }
- 
- 

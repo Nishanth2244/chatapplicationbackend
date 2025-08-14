@@ -21,7 +21,6 @@ public class ChatMessage {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
  
-    // Sender & Receiver details
     @Column(nullable = false)
     private String sender;
  
@@ -34,34 +33,30 @@ public class ChatMessage {
     @Column(nullable = false)
     private String type;
  
-    // Message content
     @Column(columnDefinition = "TEXT")
     private String content;
  
     @Column
     private LocalDateTime timestamp;
  
-    // ======================= BUG FIX START =======================
-    // File details
     @Column(name = "file_name")
     private String fileName;
  
     @Column(name = "file_type")
     private String fileType;
-   
-    @Column(name = "file_size") // <<< 1. FILESIZE FIELD ADD CHEYANDI
+ 
+    @Column(name = "file_size")
     private Long fileSize;
  
     @Lob
     @Basic(fetch = FetchType.LAZY)
     @Column(name = "file_data")
+    @JsonIgnore // To avoid sending large byte array in every response
     private byte[] fileData;
-    // ======================= BUG FIX END =========================
  
     @Column(name = "is_read")
     private boolean read;
  
-    // Reply-related fields
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reply_to_id")
     @JsonIgnore
@@ -70,21 +65,21 @@ public class ChatMessage {
     @Column(name = "reply_preview", columnDefinition = "TEXT")
     private String replyPreviewContent;
  
-    // Forwarding-related fields
     @Column(name = "is_forwarded")
     private Boolean forwarded;
  
     @Column(name = "forwarded_from")
     private String forwardedFrom;
+   
+    // *** BUG FIX: Added isDeleted field ***
+    @Column(name = "is_deleted", columnDefinition = "BOOLEAN DEFAULT FALSE")
+    private boolean isDeleted = false;
  
-    // Not persisted, used for runtime purposes
     @Transient
     private boolean group;
  
-    // Client tracking ID (not stored in DB)
     @Transient
     private String clientId;
- 
  
     public boolean isGroup() {
         return group;
@@ -93,11 +88,10 @@ public class ChatMessage {
     public void setGroup(boolean group) {
         this.group = group;
     }
-   
+ 
     @Column(name = "is_pinned")
     private Boolean pinned = false;
  
     @Column(name = "pinned_at")
     private LocalDateTime pinnedAt;
 }
- 

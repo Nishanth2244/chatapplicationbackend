@@ -1,3 +1,4 @@
+
 package com.app.chat_service.dto;
 import java.time.LocalDateTime;
 import com.fasterxml.jackson.annotation.JsonInclude;

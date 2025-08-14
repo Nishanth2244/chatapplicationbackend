@@ -1,23 +1,22 @@
 package com.app.chat_service.controller;
  
-import java.security.Principal;
-import java.time.LocalDateTime;
- 
-import org.springframework.messaging.handler.annotation.DestinationVariable;
-import org.springframework.messaging.handler.annotation.MessageMapping;
-import org.springframework.messaging.handler.annotation.Payload;
-import org.springframework.stereotype.Controller;
- 
 import com.app.chat_service.dto.ChatMessageRequest;
 import com.app.chat_service.dto.ReplyForwardMessageDTO;
 import com.app.chat_service.kakfa.ChatKafkaProducer;
 import com.app.chat_service.model.ChatMessage;
-import com.app.chat_service.repo.ChatMessageRepository; // <<< 1. REPOSITORY IMPORT CHEYANDI
+import com.app.chat_service.repo.ChatMessageRepository;
 import com.app.chat_service.service.ChatForwardService;
 import com.app.chat_service.service.ChatMessageService;
 import com.app.chat_service.service.ChatPresenceTracker;
- 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.handler.annotation.DestinationVariable;
+import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.handler.annotation.Payload;
+import org.springframework.messaging.simp.SimpMessagingTemplate; // <<< 1. IMPORT SIMPMESSAGINGTEMPLATE
+import org.springframework.stereotype.Controller;
+ 
+import java.security.Principal;
+import java.time.LocalDateTime;
  
 @Controller
 @Slf4j
@@ -27,21 +26,24 @@ public class WebSocketChatController {
     private final ChatPresenceTracker chatTracker;
     private final ChatMessageService chatMessageService;
     private final ChatForwardService chatForwardService;
-    private final ChatMessageRepository chatMessageRepository; // <<< 2. REPOSITORY INJECT CHEYANDI
+    private final ChatMessageRepository chatMessageRepository;
+    private final SimpMessagingTemplate messagingTemplate; // <<< 2. INJECT SIMPMESSAGINGTEMPLATE
  
     public WebSocketChatController(ChatKafkaProducer chatKafkaProducer,
-                                     ChatPresenceTracker chatTracker,
-                                     ChatMessageService chatMessageService,
-                                     ChatForwardService chatForwardService,
-                                     ChatMessageRepository chatMessageRepository) { // <<< 3. CONSTRUCTOR LO ADD CHEYANDI
+                                   ChatPresenceTracker chatTracker,
+                                   ChatMessageService chatMessageService,
+                                   ChatForwardService chatForwardService,
+                                   ChatMessageRepository chatMessageRepository,
+                                   SimpMessagingTemplate messagingTemplate) { // <<< 3. ADD TO CONSTRUCTOR
         this.chatKafkaProducer = chatKafkaProducer;
         this.chatTracker = chatTracker;
         this.chatMessageService = chatMessageService;
         this.chatForwardService = chatForwardService;
-        this.chatMessageRepository = chatMessageRepository; // <<< 4. INITIALIZE CHEYANDI
+        this.chatMessageRepository = chatMessageRepository;
+        this.messagingTemplate = messagingTemplate; // <<< 4. INITIALIZE IT
     }
  
-    /** Handles direct or group chat messages */
+    /** Handles direct or group chat messages (This seems to be an older mapping, keeping as is) */
     @MessageMapping("/chat/{target}")
     public void sendMessage(@DestinationVariable String target,
                             @Payload ChatMessage message,
@@ -53,16 +55,11 @@ public class WebSocketChatController {
         message.setTimestamp(LocalDateTime.now());
  
         log.info("📩 Chat message from {} to {}", sender, target);
-       
-        // BUG FIX: Message ni save cheyandi
         ChatMessage savedMessage = chatMessageRepository.save(message);
-       
         chatKafkaProducer.send(savedMessage);
  
-        // Sidebar update for sender
         chatMessageService.broadcastChatOverview(sender);
  
-        // Update receiver sidebar only for private chat
         if (!message.isGroup()) {
             chatMessageService.broadcastChatOverview(target);
         } else {
@@ -111,14 +108,30 @@ public class WebSocketChatController {
         message.setTimestamp(LocalDateTime.now());
         message.setClientId(request.getClientId());
  
-        // ======================= BUG FIX START =======================
         // 1. Message ni Database lo save cheyandi.
         ChatMessage savedMessage = chatMessageRepository.save(message);
         log.info("✅ Message saved to DB with ID: {}", savedMessage.getId());
  
-        // 2. Save chesina message (with DB ID) ni Kafka ki pampandi.
-        chatKafkaProducer.send(savedMessage);
+        // ======================= BUG FIX START =======================
+        // 2. Sender ki "nee message save ayyindi" ani acknowledgement (ACK) pampandi.
+        //    Ide "Sending..." status ni fix chestundi.
+        if (savedMessage.getClientId() != null) {
+            String ackQueue;
+            // Decide which ACK queue to use based on chat type
+            if ("PRIVATE".equalsIgnoreCase(savedMessage.getType())) {
+                ackQueue = "/queue/private-ack";
+            } else {
+                ackQueue = "/queue/group-ack";
+            }
+            // Send the saved message (with DB ID) back to the sender's private ACK queue
+            messagingTemplate.convertAndSendToUser(savedMessage.getSender(), ackQueue, savedMessage);
+            log.info("✅ Sent ACK for message ID {} to sender {} on queue {}", savedMessage.getId(), savedMessage.getSender(), ackQueue);
+        }
         // ======================= BUG FIX END =========================
+ 
+        // 3. Save chesina message (with DB ID) ni Kafka ki pampandi (Receiver kosam).
+        //    Ee existing logic ni manam change cheyatledu.
+        chatKafkaProducer.send(savedMessage);
  
         // Update sender sidebar
         chatMessageService.broadcastChatOverview(request.getSender());
@@ -133,17 +146,11 @@ public class WebSocketChatController {
  
     @MessageMapping("/chat/reply")
     public void handleReply(ReplyForwardMessageDTO dto) {
-        // NOTE: Ee method lo kuda message save avvali.
-        // chatForwardService lo aa logic undemo check cheyandi.
         chatForwardService.handleReplyOrForward(dto);
     }
  
     @MessageMapping("/chat/forward")
     public void handleForward(ReplyForwardMessageDTO dto) {
-        // NOTE: Ee method lo kuda message save avvali.
-        // chatForwardService lo aa logic undemo check cheyandi.
         chatForwardService.handleReplyOrForward(dto);
     }
 }
- 
- 

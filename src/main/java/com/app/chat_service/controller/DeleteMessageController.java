@@ -1,23 +1,24 @@
 package com.app.chat_service.controller;
  
-import com.app.chat_service.service.MessageDeleteService;
-import com.app.chat_service.service.UpdateChatMessageService;
-import com.app.chat_service.dto.ChatMessageRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.app.chat_service.service.MessageDeleteService;
  
 @RequestMapping("/api/chat") // Consolidated base path
 @RestController
 public class DeleteMessageController {
  
     private final MessageDeleteService messageDeleteService;
-    private final UpdateChatMessageService updateChatMessageService;
  
     @Autowired
-    public DeleteMessageController(MessageDeleteService messageDeleteService, UpdateChatMessageService updateChatMessageService) {
+    public DeleteMessageController(MessageDeleteService messageDeleteService) {
         this.messageDeleteService = messageDeleteService;
-        this.updateChatMessageService = updateChatMessageService;
     }
  
     // Soft delete for current user (hide message for that user only)
@@ -46,14 +47,4 @@ public class DeleteMessageController {
         }
     }
    
-    @PutMapping("/update/{messageId}")
-    public ResponseEntity<String> updateMessage(
-            @PathVariable Long messageId,
-            @RequestBody ChatMessageRequest updatedRequest) {
-        String result = updateChatMessageService.updateChatMessage(messageId, updatedRequest);
-        if (result.startsWith("Error")) {
-            return ResponseEntity.badRequest().body(result);
-        }
-        return ResponseEntity.ok(result);
-    }
 }

@@ -7,6 +7,8 @@ import lombok.Data;
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ChatMessageRequest {
+	@JsonProperty("messageId") // ✅ Ensures JSON field matches exactly
+    private Long messageId;
     private String content;
     private String groupId;
     private String sender;

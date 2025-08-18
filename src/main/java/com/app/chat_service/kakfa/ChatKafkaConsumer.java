@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -35,10 +36,10 @@ public class ChatKafkaConsumer {
     )
     @Transactional
     public void consume(ChatMessage incomingMessage) {
+        long startTime = System.currentTimeMillis();
 
-        // Determine if the message is deleted
+        // Deleted message check
         boolean isDeleted = "This message was deleted".equalsIgnoreCase(incomingMessage.getContent());
-
         if (isDeleted) {
             log.info("📥 Kafka DELETED event consumed for message ID: {}", incomingMessage.getId());
         } else {
@@ -74,7 +75,7 @@ public class ChatKafkaConsumer {
             }
         }
 
-        // Build ChatMessageResponse including the isDeleted flag
+        // Build response
         ChatMessageResponse response = new ChatMessageResponse(
                 incomingMessage.getId(),
                 incomingMessage.getSender(),
@@ -86,25 +87,19 @@ public class ChatKafkaConsumer {
                 incomingMessage.getFileSize(),
                 incomingMessage.getType(),
                 incomingMessage.getTimestamp(),
-                null,            // fileData not loaded here
+                null,
                 incomingMessage.getClientId()
         );
-
-        // Set read status
         response.setSeen(isPrivateRead);
+        if (isDeleted) response.setIsDeleted(true);
 
-        // Set deleted flag if applicable
-        if (isDeleted) {
-            response.setIsDeleted(true);
-        }
-
-        // Publish the message to Redis
+        // ✅ Redis publish
         redisPublisher.publish(response);
-        log.info("🚀 Published message to Redis for delivery. DB ID: {}", incomingMessage.getId());
+        log.info("🚀 Published message to Redis. DB ID: {} (processing took {} ms)",
+                incomingMessage.getId(), (System.currentTimeMillis() - startTime));
 
-        // Broadcast chat overview updates
+        // Broadcast overviews
         chatMessageService.broadcastChatOverview(incomingMessage.getSender());
-
         if ("PRIVATE".equalsIgnoreCase(incomingMessage.getType()) && incomingMessage.getReceiver() != null) {
             chatMessageService.broadcastChatOverview(incomingMessage.getReceiver());
         } else if ("TEAM".equalsIgnoreCase(incomingMessage.getType()) && incomingMessage.getGroupId() != null) {

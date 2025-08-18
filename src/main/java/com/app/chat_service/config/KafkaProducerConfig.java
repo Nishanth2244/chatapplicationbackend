@@ -23,8 +23,16 @@ public class KafkaProducerConfig {
         configProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         configProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
 
-        // Allow large files (50 MB example)
-        configProps.put(ProducerConfig.MAX_REQUEST_SIZE_CONFIG, 52428800); // 50 MB
+        // ✅ Performance configs
+        configProps.put(ProducerConfig.ACKS_CONFIG, "1"); // Leader ack only (fast)
+        configProps.put(ProducerConfig.LINGER_MS_CONFIG, "0"); // No delay, send instantly
+        configProps.put(ProducerConfig.BATCH_SIZE_CONFIG, 16384); // Small batches
+        configProps.put(ProducerConfig.BUFFER_MEMORY_CONFIG, 33554432); // 32MB buffer
+        configProps.put(ProducerConfig.RETRIES_CONFIG, 2); // retry a couple of times
+        configProps.put(ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG, 120000);
+
+        // ✅ Allow large files up to 50MB
+        configProps.put(ProducerConfig.MAX_REQUEST_SIZE_CONFIG, 52428800);
 
         return new DefaultKafkaProducerFactory<>(configProps);
     }

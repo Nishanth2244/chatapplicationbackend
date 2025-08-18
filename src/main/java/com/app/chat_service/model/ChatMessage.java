@@ -3,7 +3,7 @@ package com.app.chat_service.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty; // ✅ FIX: Added this import
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -71,28 +71,24 @@ public class ChatMessage {
  
     @Column(name = "forwarded_from")
     private String forwardedFrom;
-   
+ 
     @Column(name = "is_deleted", columnDefinition = "BOOLEAN DEFAULT FALSE")
     private boolean isDeleted = false;
+    // ======================= BUG FIX STARTS HERE =======================
+    @Column(name = "is_edited", columnDefinition = "BOOLEAN DEFAULT FALSE")
+    private boolean isEdited = false;
+    // ======================= BUG FIX ENDS HERE =========================
  
     @Transient
     private boolean group;
  
-    // ======================= BUG FIX STARTS HERE =======================
     @Transient
     private String clientId;
  
-    /**
-     * ✅ FIX: This custom getter with @JsonProperty ensures that even though the field
-     * is @Transient (ignored by the database), it WILL be included in the JSON
-     * response with the correct name "client_id" (with an underscore).
-     * This is the key to solving the ACK problem.
-     */
     @JsonProperty("client_id")
     public String getClientId() {
         return clientId;
     }
-    // ======================= BUG FIX ENDS HERE =======================
  
     public boolean isGroup() {
         return group;
@@ -107,6 +103,4 @@ public class ChatMessage {
  
     @Column(name = "pinned_at")
     private LocalDateTime pinnedAt;
-}
-                 
- 
+}  

@@ -1,11 +1,12 @@
-
 package com.app.chat_service.dto;
+ 
 import java.time.LocalDateTime;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+ 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -18,16 +19,22 @@ public class ChatMessageResponse {
     private String content;
     private String fileName;
     private String fileType;
-    private Long fileSize; // <<< 1. FILESIZE FIELD ADD CHEYANDI
+    private Long fileSize;
     private String type;
     private LocalDateTime timestamp;
     private byte[] fileData;
-    private boolean seen; // For read status
-    private Boolean isDeleted = false; // ✅ ADDED: Flag for soft deletion
+    private boolean seen;
+    private Boolean isDeleted = false;
+    // ======================= BUG FIX STARTS HERE =======================
+    @JsonProperty("isEdited")
+    private boolean isEdited = false;
+    // ======================= BUG FIX ENDS HERE =========================
+ 
     @JsonProperty("client_id")
     private String clientId;
-    // Overloaded constructor without 'seen' for backward compatibility if needed
-    public ChatMessageResponse(Long id, String sender, String receiver, String groupId, String content, String fileName, String fileType, Long fileSize, String type, LocalDateTime timestamp, byte[] fileData, String clientId) {
+ 
+    // Main constructor used in the application
+    public ChatMessageResponse(Long id, String sender, String receiver, String groupId, String content, String fileName, String fileType, Long fileSize, String type, LocalDateTime timestamp, byte[] fileData, String clientId, boolean isEdited) {
         this.id = id;
         this.sender = sender;
         this.receiver = receiver;
@@ -35,10 +42,16 @@ public class ChatMessageResponse {
         this.content = content;
         this.fileName = fileName;
         this.fileType = fileType;
-        this.fileSize = fileSize; // <<< 2. CONSTRUCTOR LO INITIALIZE CHEYANDI
+        this.fileSize = fileSize;
         this.type = type;
         this.timestamp = timestamp;
         this.fileData = fileData;
         this.clientId = clientId;
+        this.isEdited = isEdited; // Initialize the new field
+    }
+ 
+    // Overloaded constructor for backward compatibility if needed elsewhere
+    public ChatMessageResponse(Long id, String sender, String receiver, String groupId, String content, String fileName, String fileType, Long fileSize, String type, LocalDateTime timestamp, byte[] fileData, String clientId) {
+         this(id, sender, receiver, groupId, content, fileName, fileType, fileSize, type, timestamp, fileData, clientId, false);
     }
 }

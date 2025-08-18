@@ -16,9 +16,12 @@ public class ChatMessageOverviewDTO {
     private String isSeen;
     private String content;
  
-    // --- ADDED FIELDS ---
     private String fileName;
     private String fileType;
-    private Long fileSize; // Use Long for file size in bytes
-}
+    private Long fileSize;
  
+    // ======================= BUG FIX STARTS HERE =======================
+    // Refresh chesinappudu reply details పంపించడానికి ఈ ఫీల్డ్ యాడ్ చేస్తున్నాం.
+    private ReplyInfoDTO replyTo;
+    // ======================= BUG FIX ENDS HERE =========================
+}

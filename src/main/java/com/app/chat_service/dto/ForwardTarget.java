@@ -6,5 +6,5 @@ import lombok.Data;
 public class ForwardTarget {
     private String receiver; // for private messages
     private String groupId;  // for group messages
-    private String type;     // "PRIVATE", "TEAM", etc.
+//    private String type;     // "PRIVATE", "TEAM", etc.
 }

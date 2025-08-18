@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
  
@@ -25,13 +26,28 @@ public class ChatMessageResponse {
     private byte[] fileData;
     private boolean seen;
     private Boolean isDeleted = false;
-    // ======================= BUG FIX STARTS HERE =======================
+ 
     @JsonProperty("isEdited")
     private boolean isEdited = false;
-    // ======================= BUG FIX ENDS HERE =========================
  
     @JsonProperty("client_id")
     private String clientId;
+ 
+    // ======================= BUG FIX STARTS HERE =======================
+    // Reply context kosam ee kotha object ni add chesthunnam.
+    private ReplyInfo replyTo;
+ 
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class ReplyInfo {
+        private String senderId;
+        private String content;
+        private Long originalMessageId;
+        private String type; // Original message type (text, image, etc.)
+    }
+    // ======================= BUG FIX ENDS HERE =========================
  
     // Main constructor used in the application
     public ChatMessageResponse(Long id, String sender, String receiver, String groupId, String content, String fileName, String fileType, Long fileSize, String type, LocalDateTime timestamp, byte[] fileData, String clientId, boolean isEdited) {
@@ -54,4 +70,4 @@ public class ChatMessageResponse {
     public ChatMessageResponse(Long id, String sender, String receiver, String groupId, String content, String fileName, String fileType, Long fileSize, String type, LocalDateTime timestamp, byte[] fileData, String clientId) {
          this(id, sender, receiver, groupId, content, fileName, fileType, fileSize, type, timestamp, fileData, clientId, false);
     }
-}
+}    

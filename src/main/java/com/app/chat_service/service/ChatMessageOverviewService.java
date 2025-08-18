@@ -1,6 +1,7 @@
 package com.app.chat_service.service;
  
 import com.app.chat_service.dto.ChatMessageOverviewDTO;
+import com.app.chat_service.dto.ReplyInfoDTO; // Import the new DTO
 import com.app.chat_service.model.ChatMessage;
 import com.app.chat_service.model.MessageAction;
 import com.app.chat_service.repo.ChatMessageRepository;
@@ -47,8 +48,28 @@ public class ChatMessageOverviewService {
         return messages.stream()
             .filter(msg -> !hiddenMessageIds.contains(msg.getId()))
             .map(msg -> {
-                // --- MODIFIED LOGIC STARTS HERE ---
                 boolean isFile = msg.getFileName() != null;
+ 
+                // ======================= BUG FIX STARTS HERE =======================
+                // Message ఒకవేళ reply అయితే, దాని details ని build చేస్తున్నాం.
+                ReplyInfoDTO replyInfo = null;
+                if (msg.getReplyToMessage() != null) {
+                    ChatMessage original = msg.getReplyToMessage();
+                    String originalMessageType = "text"; // Default
+                    if (original.getFileName() != null && original.getFileType() != null) {
+                        if (original.getFileType().startsWith("image/")) originalMessageType = "image";
+                        else if (original.getFileType().startsWith("audio/")) originalMessageType = "audio";
+                        else originalMessageType = "file";
+                    }
+ 
+                    replyInfo = ReplyInfoDTO.builder()
+                        .senderId(original.getSender())
+                        .content(msg.getReplyPreviewContent())
+                        .originalMessageId(original.getId())
+                        .type(originalMessageType)
+                        .build();
+                }
+                // ======================= BUG FIX ENDS HERE =========================
  
                 return ChatMessageOverviewDTO.builder()
                     .messageId(msg.getId())
@@ -57,19 +78,14 @@ public class ChatMessageOverviewService {
                     .sender(msg.getSender())
                     .receiver(msg.getReceiver() != null ? msg.getReceiver() : msg.getGroupId())
                     .type(msg.getType())
-                    .kind(resolveKind(msg)) // Determines if it's 'image', 'audio', 'file' etc.
+                    .kind(resolveKind(msg))
                     .isSeen(Boolean.toString(msg.isRead()))
-                   
-                    // If it's a file, set content to messageId for the frontend to build the URL.
-                    // Otherwise, use the actual text content.
                     .content(isFile ? msg.getId().toString() : extractActualContent(msg.getContent()))
-                   
-                    // Add the new file-related fields
                     .fileName(msg.getFileName())
                     .fileType(msg.getFileType())
                     .fileSize(msg.getFileData() != null ? (long) msg.getFileData().length : 0L)
+                    .replyTo(replyInfo) // <-- Build చేసిన reply details ని ఇక్కడ set చేస్తున్నాం.
                     .build();
-                // --- MODIFIED LOGIC ENDS HERE ---
             })
             .collect(Collectors.toList());
     }
@@ -79,6 +95,9 @@ public class ChatMessageOverviewService {
     }
  
     private String resolveKind(ChatMessage msg) {
+        if (msg.isDeleted()) {
+             return "deleted";
+        }
         if (msg.getFileName() != null) {
             String fileType = msg.getFileType();
             if (fileType != null) {
@@ -86,26 +105,13 @@ public class ChatMessageOverviewService {
                 if (fileType.startsWith("audio/")) return "audio";
                 if (fileType.startsWith("video/")) return "video";
             }
-            return "file"; // Default for other files
+            return "file";
         }
-        String content = msg.getContent();
-        if (content == null) return "send";
-        if (content.startsWith("REPLY:")) return "reply";
-        if (content.startsWith("FWD:")) return "forward";
-        return "send";
+        return "text";
     }
  
     private String extractActualContent(String content) {
         if (content == null) return "";
-        if (content.startsWith("REPLY:") || content.startsWith("FWD:")) {
-            return content.substring(content.indexOf(':') + 1).trim();
-        }
-        // For file messages from old logic, the content might be "File: filename.pdf".
-        // We can clean that up, although the new logic sets content to messageId.
-        if (content.startsWith("File:")) {
-             return content; // Or return an empty string if you prefer
-        }
         return content;
     }
 }
- 

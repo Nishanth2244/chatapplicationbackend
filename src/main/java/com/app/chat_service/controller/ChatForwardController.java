@@ -4,6 +4,8 @@ import com.app.chat_service.dto.ReplyForwardMessageDTO;
 import com.app.chat_service.dto.ChatMessageResponse;
 import com.app.chat_service.service.ChatForwardService;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,7 +14,8 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class ChatForwardController {
 
-    private final ChatForwardService chatForwardService;
+    @Autowired
+    ChatForwardService chatForwardService;
 
     /**
      * REST endpoint to handle reply.

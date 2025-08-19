@@ -1,13 +1,12 @@
 package com.app.chat_service.controller;
 
 import com.app.chat_service.dto.ReplyForwardMessageDTO;
-import com.app.chat_service.dto.ChatMessageResponse;
 import com.app.chat_service.service.ChatForwardService;
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/chat")
@@ -17,22 +16,18 @@ public class ChatForwardController {
     @Autowired
     ChatForwardService chatForwardService;
 
-    /**
-     * REST endpoint to handle reply.
-     * Uses the same service logic as WebSocket.
-     */
+    // ======================= BUG FIX START =======================
+    // Changed response type to return a generic success message.
     @PostMapping("/reply")
-    public ResponseEntity<ChatMessageResponse> handleReply(@RequestBody ReplyForwardMessageDTO dto) {
-        ChatMessageResponse response = chatForwardService.handleReplyOrForward(dto);
-        return ResponseEntity.ok(response);
+    public ResponseEntity<?> handleReply(@RequestBody ReplyForwardMessageDTO dto) {
+        chatForwardService.handleReplyOrForward(dto);
+        return ResponseEntity.ok(Map.of("status", "success", "message", "Reply sent successfully."));
     }
 
-    /**
-     * REST endpoint to handle message forwarding.
-     */
     @PostMapping("/forward")
-    public ResponseEntity<ChatMessageResponse> handleForward(@RequestBody ReplyForwardMessageDTO dto) {
-        ChatMessageResponse response = chatForwardService.handleReplyOrForward(dto);
-        return ResponseEntity.ok(response);
+    public ResponseEntity<?> handleForward(@RequestBody ReplyForwardMessageDTO dto) {
+        chatForwardService.handleReplyOrForward(dto);
+        return ResponseEntity.ok(Map.of("status", "success", "message", "Message forwarded successfully."));
     }
+    // ======================= BUG FIX END =======================
 }

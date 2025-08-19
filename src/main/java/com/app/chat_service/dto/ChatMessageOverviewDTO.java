@@ -1,8 +1,6 @@
 package com.app.chat_service.dto;
- 
 import lombok.Builder;
 import lombok.Data;
- 
 @Data
 @Builder
 public class ChatMessageOverviewDTO {
@@ -15,13 +13,13 @@ public class ChatMessageOverviewDTO {
     private String kind;
     private String isSeen;
     private String content;
- 
     private String fileName;
     private String fileType;
     private Long fileSize;
- 
-    // ======================= BUG FIX STARTS HERE =======================
-    // Refresh chesinappudu reply details పంపించడానికి ఈ ఫీల్డ్ యాడ్ చేస్తున్నాం.
     private ReplyInfoDTO replyTo;
-    // ======================= BUG FIX ENDS HERE =========================
+ 
+    // ======================= REFRESH BUG FIX START =======================
+    private Boolean forwarded;
+    private String forwardedFrom;
+    // ======================= REFRESH BUG FIX END =========================
 }

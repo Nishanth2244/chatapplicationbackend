@@ -32,9 +32,8 @@ public class ChatMessageService {
     private final SimpMessagingTemplate messagingTemplate;
     private final MessageReadStatusRepository readStatusRepo;
    
-    // =================================================================================
     // ✅ FINAL UNREAD COUNT BUG FIX: Inject the presence tracker.
-    // =================================================================================
+   
     private final ChatPresenceTracker chatPresenceTracker;
  
  

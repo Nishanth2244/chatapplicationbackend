@@ -1,7 +1,10 @@
 package com.app.chat_service.repo;
 
 import java.util.List;
+import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import com.app.chat_service.model.ChatMessage;
@@ -66,5 +69,15 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
     long countUnreadGroupMessages(@Param("groupId") String groupId,
                                   @Param("employeeId") String employeeId);
     // ========================================================================
+    
+    Optional<ChatMessage> findTopByGroupIdAndPinnedIsTrueOrderByPinnedAtDesc(String groupId);
+    
+    Optional<ChatMessage> findTopBySenderInAndReceiverInAndPinnedIsTrueOrderByPinnedAtDesc(List<String> senders, List<String> receivers);
+ 
+    @Modifying
+    @Query("UPDATE ChatMessage m SET m.pinned = false, m.pinnedAt = null WHERE m.pinned = true AND ((m.sender = :user1 AND m.receiver = :user2) OR (m.sender = :user2 AND m.receiver = :user1) OR m.groupId = :chatId)")
+    void unpinAllMessagesInChat(@Param("chatId") String chatId, @Param("user1") String user1, @Param("user2") String user2);
+ 
+
 
 }

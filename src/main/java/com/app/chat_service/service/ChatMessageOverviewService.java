@@ -1,30 +1,47 @@
 package com.app.chat_service.service;
+ 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.app.chat_service.dto.ChatMessageOverviewDTO;
 import com.app.chat_service.dto.ReplyInfoDTO;
 import com.app.chat_service.model.ChatMessage;
 import com.app.chat_service.model.MessageAction;
 import com.app.chat_service.repo.ChatMessageRepository;
 import com.app.chat_service.repo.MessageActionRepository;
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
+ 
 @Service
 @RequiredArgsConstructor
 public class ChatMessageOverviewService {
+ 
     private final ChatMessageRepository chatMessageRepository;
     private final MessageActionRepository messageActionRepository;
+    // Ee kotha service ni inject chesanu
+    private final ClearedChatService clearedChatService;
+ 
     @Transactional(readOnly = true)
     public List<ChatMessageOverviewDTO> getChatMessages(String empId, String chatId) {
+       
+        // Chat clear chesina time ni theesukuntunnam
+        LocalDateTime clearedAt = clearedChatService.getClearedAt(empId, chatId);
+ 
         List<ChatMessage> messages;
         if (isTeamId(chatId)) {
-            messages = chatMessageRepository.findTeamChatMessages(chatId);
+            // Paatha method badulu, ee kotha method ni use chesthunnam
+            messages = chatMessageRepository.findTeamChatMessagesAfter(chatId, clearedAt);
         } else {
-            messages = chatMessageRepository.findPrivateChatMessages(empId, chatId);
+            // Paatha method badulu, ee kotha method ni use chesthunnam
+            messages = chatMessageRepository.findPrivateChatMessagesAfter(empId, chatId, clearedAt);
         }
+ 
         List<Long> messageIds = messages.stream()
                 .map(ChatMessage::getId)
                 .collect(Collectors.toList());
@@ -78,9 +95,11 @@ public class ChatMessageOverviewService {
             })
             .collect(Collectors.toList());
     }
+ 
     private boolean isTeamId(String chatId) {
         return chatId != null && chatId.toUpperCase().startsWith("TEAM");
     }
+ 
     private String resolveKind(ChatMessage msg) {
         if (msg.isDeleted()) {
              return "deleted";
@@ -96,8 +115,11 @@ public class ChatMessageOverviewService {
         }
         return "text";
     }
+ 
     private String extractActualContent(String content) {
         if (content == null) return "";
         return content;
     }
 }
+ 
+ 

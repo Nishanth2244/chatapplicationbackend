@@ -56,27 +56,6 @@ public class WebSocketChatController {
         this.clearedChatService = clearedChatService;
     }
 
-    // Send new chat message
-    @MessageMapping("/chat/{target}")
-    public void sendMessage(@DestinationVariable String target,
-                            @Payload ChatMessage message,
-                            Principal principal) {
-        String sender = principal.getName();
-        message.setSender(sender);
-        message.setReceiver(target);
-        message.setType(message.isGroup() ? "TEAM" : "PRIVATE");
-        message.setTimestamp(LocalDateTime.now());
-        log.info("📩 Chat message from {} to {}", sender, target);
-        ChatMessage savedMessage = chatMessageRepository.save(message);
-        chatKafkaProducer.send(savedMessage);
-        chatMessageService.broadcastChatOverview(sender);
-        if (!message.isGroup()) {
-            chatMessageService.broadcastChatOverview(target);
-        } else {
-            chatMessageService.broadcastGroupChatOverview(message.getGroupId());
-        }
-    }
-
     // Mark chat as opened, start read process
     @MessageMapping("/presence/open/{target}")
     public void openChat(@DestinationVariable String target, Principal principal) {

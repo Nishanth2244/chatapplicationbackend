@@ -2,7 +2,6 @@ package com.app.chat_service.controller;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -11,7 +10,6 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -146,20 +144,6 @@ public class ChatController {
         return teamService.ByEmpId(employeeId);
     }
 
-    /** Typing indicator */
-    @MessageMapping("/chat/typing")
-    public void handleTypingStatus(@Payload TypingStatusDTO typingStatus) {
-        System.out.println("Typing event received from: " + typingStatus.getSenderId());
-
-        String destination = switch (typingStatus.getType().toUpperCase()) {
-            case "PRIVATE" -> "/queue/typing-" + typingStatus.getReceiverId();
-            case "TEAM" -> "/topic/typing-team-" + typingStatus.getGroupId();
-            case "DEPARTMENT" -> "/topic/typing-department-" + typingStatus.getGroupId();
-            default -> throw new IllegalArgumentException("Invalid chat type: " + typingStatus.getType());
-        };
-
-        messagingTemplate.convertAndSend(destination, typingStatus);
-    }
 
     /** Helper to map ChatMessage -> ChatMessageResponse */
     private ChatMessageResponse toResponse(ChatMessage msg) {
@@ -179,4 +163,3 @@ public class ChatController {
         );
     }
 }
-

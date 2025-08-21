@@ -35,7 +35,11 @@ public class ChatMessageResponse {
     @JsonProperty("forwardedFrom")
     private String forwardedFrom;
     // ======================= FORWARD FIX END =========================
+    
+    private String fileUrl;
+    
     private ReplyInfo replyTo;
+    
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
@@ -54,7 +58,7 @@ public class ChatMessageResponse {
         this.groupId = groupId;
         this.content = content;
         this.fileName = fileName;
-        this.fileType = fileType;
+        this.fileType = fileType; 
         this.fileSize = fileSize;
         this.type = type;
         this.timestamp = timestamp;

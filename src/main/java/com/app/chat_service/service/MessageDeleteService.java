@@ -49,7 +49,7 @@ public class MessageDeleteService {
      */
     @Transactional
     public void deleteForEveryone(Long messageId, String userId) {
-        log.info("Message deleted for everyone. Message ID: {}, Requester: {}", messageId, userId);
+        log.info("Message deleted for everyone. Message ID: {}, by user: {}", messageId, userId);
  
         ChatMessage message = chatMessageRepository.findById(messageId)
                 .orElseThrow(() -> new NoSuchElementException("Message not found with ID: " + messageId));

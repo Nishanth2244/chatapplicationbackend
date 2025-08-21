@@ -41,9 +41,9 @@ public class ChatKafkaConsumer {
         // Deleted message check
         boolean isDeleted = "This message was deleted".equalsIgnoreCase(incomingMessage.getContent());
         if (isDeleted) {
-            log.info("📥 Kafka DELETED event consumed for message ID: {}", incomingMessage.getId());
+            log.info("🗑️ Deleted message received to consumer. ID: {}", incomingMessage.getId());
         } else {
-            log.info("📥 Kafka NEW message consumed with DB ID: {}", incomingMessage.getId());
+            log.info("📥 Message received to consumer. ID: {}", incomingMessage.getId());
         }
 
         boolean isPrivateRead = false;
@@ -90,13 +90,18 @@ public class ChatKafkaConsumer {
                 null,
                 incomingMessage.getClientId()
         );
+
+        if (incomingMessage.getFileName() != null) {             
+            String fileUrl = "/api/chat/file/" + incomingMessage.getId(); 
+            response.setFileUrl(fileUrl); 
+        }
+
         response.setSeen(isPrivateRead);
         if (isDeleted) response.setIsDeleted(true);
 
         // ✅ Redis publish
         redisPublisher.publish(response);
-        log.info("🚀 Published message to Redis. DB ID: {} (processing took {} ms)",
-                incomingMessage.getId(), (System.currentTimeMillis() - startTime));
+        log.info("🚀 Message sent from consumer to Redis. ID: {}", incomingMessage.getId());
 
         // Broadcast overviews
         chatMessageService.broadcastChatOverview(incomingMessage.getSender());

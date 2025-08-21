@@ -1,5 +1,4 @@
 package com.app.chat_service.controller;
- 
 import com.app.chat_service.kakfa.ChatKafkaProducer;
 import com.app.chat_service.model.ChatMessage;
 import com.app.chat_service.repo.ChatMessageRepository;
@@ -100,5 +99,3 @@ public class FileUploadController {
         return new ResponseEntity<>(msg.getFileData(), headers, HttpStatus.OK);
     }
 }
- 
- 

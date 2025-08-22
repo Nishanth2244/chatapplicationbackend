@@ -7,7 +7,7 @@ import com.app.chat_service.dto.ChatMessageRequest;
 import com.app.chat_service.service.UpdateChatMessageService;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/chat")
 public class UpdateChatMessageController {
 
     private final UpdateChatMessageService updateChatMessageService;

@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 import java.util.*;
  
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/chat")
 @Slf4j
 public class FileUploadController {
  
@@ -78,7 +78,7 @@ public class FileUploadController {
         }
     }
  
-    @GetMapping("/chat/file/{id}")
+    @GetMapping("/file/{id}")
     public ResponseEntity<byte[]> getFile(@PathVariable Long id) {
         ChatMessage msg = chatMessageRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Message not found with id: " + id));

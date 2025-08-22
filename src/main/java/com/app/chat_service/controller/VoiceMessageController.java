@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/voice")
+@RequestMapping("/api/chat/voice")
 @Slf4j
 @RequiredArgsConstructor
 public class VoiceMessageController {

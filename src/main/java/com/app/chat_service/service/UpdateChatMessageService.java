@@ -62,7 +62,9 @@ public class UpdateChatMessageService {
                 savedMessage.getTimestamp(),
                 null, 
                 savedMessage.getClientId(),
-                savedMessage.isEdited() // <-- Pass the edited status to the response
+                									
+                savedMessage.isEdited(),		// <-- Pass the edited status to the response
+                savedMessage.getDuration()
         );
         // ======================= BUG FIX ENDS HERE =========================
  

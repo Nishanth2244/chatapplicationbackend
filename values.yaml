@@ -1,0 +1,64 @@
+
+replicaCount: 2
+
+microservice:
+  name: chat-service
+  namespace: hrms
+  port: 8082
+
+
+image:
+  repository: koti21/employee-service-hrms
+  pullPolicy: IfNotPresent
+  tag: "v1"
+
+
+resources: 
+  limits:
+    cpu: 1000m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  # Optional:
+  # targetMemoryUtilizationPercentage: 75
+
+livenessProbe:
+  path: "employee/actuator/health/liveness"
+  initialDelaySeconds: 180
+  periodSeconds: 10
+
+readinessProbe:
+  path: "employee/actuator/health/readiness"
+  initialDelaySeconds: 150
+  periodSeconds: 10
+
+service:
+  type: NodePort
+  port: 80
+  nodePort: 30081
+
+gateway:
+  namespace: istio-ingress
+  name: gateway
+  hostname: "example.com"
+httprouts:
+  hostnames: ["example.com"]
+  path: "/employee"
+hostnames: ["example.com"]
+
+serviceAccount:
+  annotations:
+    example.com/annotation: "value"
+  rules:
+    - apiGroups: [""]
+      resources: ["pods"] 
+      verbs: ["get", "list", "watch"]
+

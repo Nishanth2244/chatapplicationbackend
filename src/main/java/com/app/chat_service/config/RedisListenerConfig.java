@@ -21,9 +21,6 @@ public class RedisListenerConfig {
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(connectionFactory);
         container.addMessageListener(redisSubscriber, topic);
-
-        System.out.println("✅ RedisMessageListenerContainer subscribed to topic: " + topic.getTopic());
-
         return container;
     }
 }

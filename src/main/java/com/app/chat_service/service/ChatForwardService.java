@@ -98,8 +98,9 @@ public class ChatForwardService {
                 message.getTimestamp(),
                 null,
                 message.getClientId(),
-                message.isEdited()
-        );
+                message.isEdited(),
+                message.getDuration()
+                );
  
         // ======================= FORWARD FIX START =======================
         response.setForwarded(message.getForwarded());

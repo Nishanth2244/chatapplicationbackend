@@ -24,7 +24,8 @@ public class VoiceMessageController {
 
     @PostMapping("/upload")
     public ResponseEntity<?> uploadVoiceMessage(@RequestBody VoiceMessageRequest voiceRequest) {
-        try {
+    	log.info("VOICE MESSAGE REQUEST DURATION{}",	voiceRequest.getDuration());
+    	try {
             if (voiceRequest.getFileData() == null || voiceRequest.getFileData().isEmpty()) {
                 return ResponseEntity.badRequest().body(Map.of("error", "File data is empty."));
             }
@@ -49,6 +50,8 @@ public class VoiceMessageController {
             message.setFileSize((long) audioBytes.length);
             message.setContent(voiceRequest.getFileName());
             message.setRead(false);
+            
+            message.setDuration(voiceRequest.getDuration());
 
             ChatMessage savedMessage = chatMessageRepository.save(message);
 

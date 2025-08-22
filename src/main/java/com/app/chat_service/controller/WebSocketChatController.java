@@ -57,7 +57,7 @@ public class WebSocketChatController {
     }
 
     // Mark chat as opened, start read process
-    @MessageMapping("/presence/open/{target}")
+    @MessageMapping("/chat/presence/open/{target}")
     public void openChat(@DestinationVariable String target, Principal principal) {
         String user = principal.getName();
         chatTracker.openChat(user, target);
@@ -70,7 +70,7 @@ public class WebSocketChatController {
     }
 
     // Mark chat as closed
-    @MessageMapping("/presence/close/{target}")
+    @MessageMapping("/chat/presence/close/{target}")
     public void closeChat(@DestinationVariable String target, Principal principal) {
         String user = principal.getName();
         chatTracker.closeChat(user, target);

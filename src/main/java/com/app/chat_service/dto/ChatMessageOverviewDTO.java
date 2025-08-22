@@ -16,6 +16,7 @@ public class ChatMessageOverviewDTO {
     private String fileName;
     private String fileType;
     private Long fileSize;
+    private Integer duration;
     private ReplyInfoDTO replyTo;
  
     // ======================= REFRESH BUG FIX START =======================

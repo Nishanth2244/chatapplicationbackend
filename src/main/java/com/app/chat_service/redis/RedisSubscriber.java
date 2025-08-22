@@ -5,6 +5,7 @@ import com.app.chat_service.service.ChatPresenceTracker;
 import com.app.chat_service.service.TeamService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.connection.MessageListener;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -15,6 +16,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class RedisSubscriber implements MessageListener {
 
     private final SimpMessagingTemplate messagingTemplate;
@@ -36,7 +38,7 @@ public class RedisSubscriber implements MessageListener {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("❌ Error processing Redis message", e);
         }
     }
 
@@ -50,14 +52,14 @@ public class RedisSubscriber implements MessageListener {
             messagingTemplate.convertAndSendToUser(
                 targetUser, "/queue/private", chatMessage
             );
-            System.out.println("📩 Message sent to receiver " + targetUser);
+            log.info("📩 Message sent to receiver {}", targetUser);
         }
 
         // Always send ACK back to sender (includes clientId for tracking)
         messagingTemplate.convertAndSendToUser(
             senderUser, "/queue/private-ack", chatMessage
         );
-        System.out.println("✅ ACK sent back to sender " + senderUser);
+        log.info("✅ ACK sent back to sender {}", senderUser);
     }
 
     /** Handle team chat messages with correct ACK */
@@ -66,18 +68,18 @@ public class RedisSubscriber implements MessageListener {
         List<String> members = teamService.getEmployeeIdsByTeamId(teamId);
 
         if (members == null || members.isEmpty()) {
-            System.err.println("⚠️ No team members found for teamId: " + teamId);
+            log.warn("⚠️ No team members found for teamId: {}", teamId);
             return;
         }
 
         // Broadcast to team topic
         messagingTemplate.convertAndSend("/topic/team-" + teamId, chatMessage);
-        System.out.println("📢 Chat broadcasted to team topic: " + teamId);
+        log.info("📢 Chat broadcasted to team topic: {}", teamId);
 
         // Send group ACK back to sender
         messagingTemplate.convertAndSendToUser(
             chatMessage.getSender(), "/queue/group-ack", chatMessage
         );
-        System.out.println("✅ Group ACK sent back to sender " + chatMessage.getSender());
+        log.info("✅ Group ACK sent back to sender {}", chatMessage.getSender());
     }
 }

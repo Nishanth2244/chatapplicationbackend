@@ -88,7 +88,8 @@ public class ChatKafkaConsumer {
                 incomingMessage.getType(),
                 incomingMessage.getTimestamp(),
                 null,
-                incomingMessage.getClientId()
+                incomingMessage.getClientId(),
+                incomingMessage.getDuration()
         );
 
         if (incomingMessage.getFileName() != null) {             

@@ -14,4 +14,5 @@ public class VoiceMessageRequest {
     private String fileType; // e.g., "audio/webm"
     private String fileName; // e.g., "voice-message-12345.webm"
     private String fileData; // This will contain the Base64 encoded string
+    private Integer duration;
 }

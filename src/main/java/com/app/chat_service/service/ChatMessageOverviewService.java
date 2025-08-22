@@ -87,6 +87,7 @@ public class ChatMessageOverviewService {
                     .fileName(msg.getFileName())
                     .fileType(msg.getFileType())
                     .fileSize(msg.getFileData() != null ? (long) msg.getFileData().length : 0L)
+                    .duration(msg.getDuration())
                     .replyTo(replyInfo)
                     .forwarded(msg.getForwarded())
                     .forwardedFrom(msg.getForwardedFrom())

@@ -39,7 +39,7 @@ import com.app.chat_service.service.TeamService;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/chat")
 @RequiredArgsConstructor
 public class ChatController {
 
@@ -55,7 +55,7 @@ public class ChatController {
     private final ChatMessageOverviewService chatMessageOverviewService;
     private final ChatMessageRepository chatMessageRepository;
     /** Fetch messages between employee and chatId (could be private or group) */
-    @GetMapping("/chat/{empId}/{chatId}")
+    @GetMapping("/{empId}/{chatId}")
     public ResponseEntity<List<ChatMessageOverviewDTO>> getChatMessages(
             @PathVariable("empId") String empId,
             @PathVariable("chatId") String chatId) {
@@ -91,7 +91,7 @@ public class ChatController {
     }
 
     /** Private chat history */
-    @GetMapping("chat/history/private")
+    @GetMapping("/history/private")
     public ResponseEntity<List<ChatMessageResponse>> getPrivateChatHistory(
             @RequestParam("sender") String sender,
             @RequestParam("receiver") String receiver) {
@@ -100,7 +100,7 @@ public class ChatController {
     }
 
     /** Group chat history */
-    @GetMapping("chat/history/group")
+    @GetMapping("/history/group")
     public ResponseEntity<List<ChatMessageResponse>> getGroupChatHistory(@RequestParam("groupId") String groupId) {
         List<ChatMessage> messages = chatService.getGroupChatHistory(groupId);
         return ResponseEntity.ok(messages.stream().map(this::toResponse).toList());
@@ -159,7 +159,8 @@ public class ChatController {
                 msg.getType(),
                 msg.getTimestamp(),
                 msg.getFileData(),
-                msg.getClientId()
-        );
+                msg.getClientId(),
+                msg.getDuration()
+                );
     }
 }

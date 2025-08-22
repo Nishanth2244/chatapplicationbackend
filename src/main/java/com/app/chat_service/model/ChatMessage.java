@@ -54,6 +54,9 @@ public class ChatMessage {
     @Column(name = "file_data")
     @JsonIgnore // To avoid sending large byte array in every response
     private byte[] fileData;
+    
+    @Column(name = "duration")
+    private Integer duration;
  
     @Column(name = "is_read")
     private boolean read;
@@ -74,10 +77,9 @@ public class ChatMessage {
  
     @Column(name = "is_deleted", columnDefinition = "BOOLEAN DEFAULT FALSE")
     private boolean isDeleted = false;
-    // ======================= BUG FIX STARTS HERE =======================
+    
     @Column(name = "is_edited", columnDefinition = "BOOLEAN DEFAULT FALSE")
     private boolean isEdited = false;
-    // ======================= BUG FIX ENDS HERE =========================
  
     @Transient
     private boolean group;

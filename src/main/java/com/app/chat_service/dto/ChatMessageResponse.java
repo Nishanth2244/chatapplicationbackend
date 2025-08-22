@@ -19,6 +19,7 @@ public class ChatMessageResponse {
     private String fileName;
     private String fileType;
     private Long fileSize;
+    private Integer duration;
     private String type;
     private LocalDateTime timestamp;
     private byte[] fileData;
@@ -34,7 +35,8 @@ public class ChatMessageResponse {
     private Boolean forwarded;
     @JsonProperty("forwardedFrom")
     private String forwardedFrom;
-    // ======================= FORWARD FIX END =========================
+    // ======================= FORWARD FIX END =========================    
+    
     
     private String fileUrl;
     
@@ -51,7 +53,7 @@ public class ChatMessageResponse {
         private String type; 
     }
  
-    public ChatMessageResponse(Long id, String sender, String receiver, String groupId, String content, String fileName, String fileType, Long fileSize, String type, LocalDateTime timestamp, byte[] fileData, String clientId, boolean isEdited) {
+    public ChatMessageResponse(Long id, String sender, String receiver, String groupId, String content, String fileName, String fileType, Long fileSize, String type, LocalDateTime timestamp, byte[] fileData, String clientId, boolean isEdited, Integer duration) {
         this.id = id;
         this.sender = sender;
         this.receiver = receiver;
@@ -65,8 +67,13 @@ public class ChatMessageResponse {
         this.fileData = fileData;
         this.clientId = clientId;
         this.isEdited = isEdited;
+        this.duration=duration;
     }
     public ChatMessageResponse(Long id, String sender, String receiver, String groupId, String content, String fileName, String fileType, Long fileSize, String type, LocalDateTime timestamp, byte[] fileData, String clientId) {
-         this(id, sender, receiver, groupId, content, fileName, fileType, fileSize, type, timestamp, fileData, clientId, false);
+         this(id, sender, receiver, groupId, content, fileName, fileType, fileSize, type, timestamp, fileData, clientId, false, null);
+    }
+    
+    public ChatMessageResponse(Long id, String sender, String receiver, String groupId, String content, String fileName, String fileType, Long fileSize, String type, LocalDateTime timestamp, byte[] fileData, String clientId, Integer duration) {
+        this(id, sender, receiver, groupId, content, fileName, fileType, fileSize, type, timestamp, fileData, clientId, false, duration);
     }
 }

@@ -37,10 +37,12 @@ import com.app.chat_service.service.EmployeeByTeamId;
 import com.app.chat_service.service.TeamService;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @RestController
 @RequestMapping("/api/chat")
 @RequiredArgsConstructor
+@Slf4j
 public class ChatController {
 
     private final AllDeptService allDeptService;
@@ -162,5 +164,17 @@ public class ChatController {
                 msg.getClientId(),
                 msg.getDuration()
                 );
+    }
+    
+    
+    @PostMapping("/internal/notify-team-update")
+    public ResponseEntity<Void> notifyTeamUpdate(@RequestParam String teamId) {
+        if (teamId == null || teamId.isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
+        log.info("Received team update notification for teamId: {}. Broadcasting overview.", teamId);
+        // This service call will update the sidebar for all team members
+        chatMessageService.broadcastGroupChatOverview(teamId);
+        return ResponseEntity.ok().build();
     }
 }

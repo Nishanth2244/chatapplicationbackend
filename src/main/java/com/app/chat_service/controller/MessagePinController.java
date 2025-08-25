@@ -5,7 +5,8 @@ import com.app.chat_service.service.MessagePinService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
- 
+
+import java.util.List;
 import java.util.Optional;
  
 @RestController
@@ -27,6 +28,7 @@ public class MessagePinController {
         return ResponseEntity.ok().build();
     }
  
+    
     @GetMapping("/{chatId}/pinned")
     public ResponseEntity<PinnedMessageDTO> getPinnedMessage(
             @PathVariable String chatId,

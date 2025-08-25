@@ -1,6 +1,6 @@
 package com.app.chat_service.redis;
 
-import com.app.chat_service.dto.ChatMessageResponse; // Use DTO so clientId is preserved
+import com.app.chat_service.dto.ChatMessageResponse;
 import com.app.chat_service.service.ChatPresenceTracker;
 import com.app.chat_service.service.TeamService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -13,6 +13,9 @@ import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+
+/** The RedisSubscriber will handle the actual delivery to WebSocket clients.**/
+
 
 @Service
 @RequiredArgsConstructor
@@ -28,8 +31,8 @@ public class RedisSubscriber implements MessageListener {
     public void onMessage(Message message, byte[] pattern) {
         try {
             String body = new String(message.getBody(), StandardCharsets.UTF_8);
-            // ✅ Deserialize into DTO containing clientId
             ChatMessageResponse chatMessage = objectMapper.readValue(body, ChatMessageResponse.class);
+            log.info("Received message {} from Redis.", chatMessage.getId());
 
             if ("PRIVATE".equalsIgnoreCase(chatMessage.getType())) {
                 handlePrivateMessage(chatMessage);
@@ -42,44 +45,27 @@ public class RedisSubscriber implements MessageListener {
         }
     }
 
-    /** Handle private chat messages with ACK support */
     private void handlePrivateMessage(ChatMessageResponse chatMessage) {
         String targetUser = chatMessage.getReceiver();
         String senderUser = chatMessage.getSender();
 
-        // Send message to receiver if their chat window is open
-        if (chatTracker.isChatWindowOpen(targetUser, senderUser)) {
-            messagingTemplate.convertAndSendToUser(
-                targetUser, "/queue/private", chatMessage
-            );
-            log.info("📩 Message sent to receiver {}", targetUser);
+        boolean isWindowOpen = chatTracker.isChatWindowOpen(targetUser, senderUser);
+        if (isWindowOpen) {
+            messagingTemplate.convertAndSendToUser(targetUser, "/queue/private", chatMessage);
         }
 
-        // Always send ACK back to sender (includes clientId for tracking)
-        messagingTemplate.convertAndSendToUser(
-            senderUser, "/queue/private-ack", chatMessage
-        );
-        log.info("✅ ACK sent back to sender {}", senderUser);
+        messagingTemplate.convertAndSendToUser(senderUser, "/queue/private-ack", chatMessage);
     }
 
-    /** Handle team chat messages with correct ACK */
     private void handleTeamMessage(ChatMessageResponse chatMessage) {
         String teamId = chatMessage.getGroupId();
         List<String> members = teamService.getEmployeeIdsByTeamId(teamId);
 
         if (members == null || members.isEmpty()) {
-            log.warn("⚠️ No team members found for teamId: {}", teamId);
             return;
         }
 
-        // Broadcast to team topic
         messagingTemplate.convertAndSend("/topic/team-" + teamId, chatMessage);
-        log.info("📢 Chat broadcasted to team topic: {}", teamId);
-
-        // Send group ACK back to sender
-        messagingTemplate.convertAndSendToUser(
-            chatMessage.getSender(), "/queue/group-ack", chatMessage
-        );
-        log.info("✅ Group ACK sent back to sender {}", chatMessage.getSender());
+        messagingTemplate.convertAndSendToUser(chatMessage.getSender(), "/queue/group-ack", chatMessage);
     }
 }

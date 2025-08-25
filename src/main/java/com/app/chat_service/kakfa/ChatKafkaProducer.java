@@ -1,18 +1,22 @@
 package com.app.chat_service.kakfa;
 
-import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.stereotype.Service;
-import com.app.chat_service.model.ChatMessage;
-import lombok.RequiredArgsConstructor;
-
 import java.util.Set;
+
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
+
+import com.app.chat_service.model.ChatMessage;
+
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
 public class ChatKafkaProducer {
 
     private final KafkaTemplate<String, ChatMessage> kafkaTemplate;
-
+    
+    @Async("asyncTaskExecutor")
     public void send(ChatMessage message) {
         String type = (message.getType() == null) ? "" : message.getType().toUpperCase();
 

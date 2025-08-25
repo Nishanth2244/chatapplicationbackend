@@ -66,6 +66,7 @@ public class ChatForwardService {
             message.setForwarded(true);
             message.setForwardedFrom(trueOriginalSender);
             message.setTimestamp(LocalDateTime.now());
+            message.setDuration(original.getDuration());
             if (target.getReceiver() != null) {
                 message.setType("PRIVATE");
                 message.setReceiver(target.getReceiver());

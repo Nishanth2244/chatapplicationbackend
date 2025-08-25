@@ -13,7 +13,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
  
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
  
 @Service
 @RequiredArgsConstructor
@@ -93,6 +95,7 @@ public class MessagePinService {
                         java.util.List.of(user1, user2), java.util.List.of(user1, user2))
                 .map(this::mapToPinnedDTO);
     }
+ 
  
     private String getPrivateChatIdentifier(String sender, String receiver) {
         return sender.compareTo(receiver) > 0 ? sender + "_" + receiver : receiver + "_" + sender;

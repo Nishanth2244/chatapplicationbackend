@@ -91,7 +91,7 @@ public class FileUploadController {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.parseMediaType(msg.getFileType()));
  
-        ContentDisposition disposition = (msg.getFileType() != null && (msg.getFileType().startsWith("image/") || msg.getFileType().startsWith("video/")))
+        ContentDisposition disposition = (msg.getFileType() != null && (msg.getFileType().startsWith("image/") || msg.getFileType().startsWith("audio/") || msg.getFileType().startsWith("video/")))
                 ? ContentDisposition.inline().filename(msg.getFileName()).build()
                 : ContentDisposition.attachment().filename(msg.getFileName()).build();
         headers.setContentDisposition(disposition);

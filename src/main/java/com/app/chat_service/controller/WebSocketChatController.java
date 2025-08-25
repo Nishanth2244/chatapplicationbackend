@@ -18,6 +18,7 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
+
 import java.security.Principal;
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -61,6 +62,7 @@ public class WebSocketChatController {
     public void openChat(@DestinationVariable String target, Principal principal) {
         String user = principal.getName();
         chatTracker.openChat(user, target);
+
         if (target.toUpperCase().startsWith("TEAM")) {
             chatMessageService.markGroupMessagesAsRead(user, target);
         } else {
@@ -74,6 +76,7 @@ public class WebSocketChatController {
     public void closeChat(@DestinationVariable String target, Principal principal) {
         String user = principal.getName();
         chatTracker.closeChat(user, target);
+
         log.info("❌ Chat closed from {} to {}", user, target);
         chatMessageService.broadcastChatOverview(user);
         chatMessageService.broadcastChatOverview(target);
@@ -83,6 +86,7 @@ public class WebSocketChatController {
     @MessageMapping("/chat/send")
     public void handleMessage(@Payload ChatMessageRequest request) {
         log.info("➡️ Message received in backend: {}", request);
+
         ChatMessage message = new ChatMessage();
         message.setSender(request.getSender());
         message.setReceiver(request.getReceiver());
@@ -91,37 +95,55 @@ public class WebSocketChatController {
         message.setGroupId(request.getGroupId());
         message.setTimestamp(LocalDateTime.now());
         message.setClientId(request.getClientId());
+
         ChatMessage savedMessage = chatMessageRepository.save(message);
         log.info("✅ Message saved to DB with ID: {}", savedMessage.getId());
+
         if (savedMessage.getClientId() != null) {
             String ackQueue = "PRIVATE".equalsIgnoreCase(savedMessage.getType())
                     ? "/queue/private-ack"
                     : "/queue/group-ack";
-            messagingTemplate.convertAndSendToUser(savedMessage.getSender(), ackQueue, savedMessage);
-            log.info("✅ Sent ACK for message ID {} to sender {} on queue {}", savedMessage.getId(), savedMessage.getSender(), ackQueue);
+
+            messagingTemplate.convertAndSendToUser(
+                    savedMessage.getSender(),
+                    ackQueue,
+                    savedMessage
+            );
+
+            log.info("✅ Sent ACK for message ID {} to sender {} on queue {}",
+                    savedMessage.getId(), savedMessage.getSender(), ackQueue);
         }
+
         chatKafkaProducer.send(savedMessage);
-        chatMessageService.broadcastChatOverview(request.getSender());
-        if ("PRIVATE".equalsIgnoreCase(request.getType()) && request.getReceiver() != null) {
-            chatMessageService.broadcastChatOverview(request.getReceiver());
-        } else if ("TEAM".equalsIgnoreCase(request.getType()) && request.getGroupId() != null) {
-            chatMessageService.broadcastGroupChatOverview(request.getGroupId());
-        }
+
+        chatMessageService.broadcastOverviewAsynchronously(
+                request.getSender(),
+                request.getReceiver(),
+                request.getGroupId(),
+                request.getType()
+        );
     }
 
     // Edit existing message
     @MessageMapping("/chat/edit")
     public void handleEditMessage(@Payload ChatMessageRequest updatedRequest) {
         log.info("✏️ Edit request received: {}", updatedRequest);
+
         if (updatedRequest.getMessageId() == null) {
             log.warn("❌ Edit request missing messageId");
             return;
         }
-        String result = updateChatMessageService.updateChatMessage(updatedRequest.getMessageId(), updatedRequest);
+
+        String result = updateChatMessageService.updateChatMessage(
+                updatedRequest.getMessageId(),
+                updatedRequest
+        );
+
         if (result.startsWith("Error")) {
             log.warn("❌ Edit failed: {}", result);
         } else {
-            log.info("✅ Message edited successfully with id {} and content {}", updatedRequest.getMessageId(), updatedRequest.getContent());
+            log.info("✅ Message edited successfully with id {} and content {}",
+                    updatedRequest.getMessageId(), updatedRequest.getContent());
         }
     }
 
@@ -143,21 +165,15 @@ public class WebSocketChatController {
      */
     @MessageMapping("/chat/clear")
     public void clearChat(@Payload ClearChatRequest dto, Principal principal) {
-        // Instead of using userId from frontend, always take authenticated user ID.
-        // This ensures only the logged-in user’s chat is cleared (for security).
         String authenticatedUserId = principal.getName();
-
-        // Call service with authenticated user ID.
         clearedChatService.clearChat(authenticatedUserId, dto.getChatId());
 
-        // Send notification only to the authenticated user.
-        // For frontend readability, send a structured object instead of plain string.
         messagingTemplate.convertAndSendToUser(
                 authenticatedUserId,
                 "/queue/clearchat",
                 Map.of(
-                    "message", "Chat cleared successfully for chatId: " + dto.getChatId(),
-                    "chatId", dto.getChatId()
+                        "message", "Chat cleared successfully for chatId: " + dto.getChatId(),
+                        "chatId", dto.getChatId()
                 )
         );
     }

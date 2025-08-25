@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -76,6 +77,7 @@ public class TeamService {
     }
 
     /** Get just the employee IDs of a given team */
+    @Cacheable(value = "teamMembers", key = "#teamId")
     public List<String> getEmployeeIdsByTeamId(String teamId) {
         List<TeamResponse> teams = getGroupMembers(teamId);
         if (teams.isEmpty()) {

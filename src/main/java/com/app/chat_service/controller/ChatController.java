@@ -56,6 +56,7 @@ public class ChatController {
     private final SimpMessagingTemplate messagingTemplate;
     private final ChatMessageOverviewService chatMessageOverviewService;
     private final ChatMessageRepository chatMessageRepository;
+    
     /** Fetch messages between employee and chatId (could be private or group) */
     @GetMapping("/{empId}/{chatId}")
     public ResponseEntity<List<ChatMessageOverviewDTO>> getChatMessages(

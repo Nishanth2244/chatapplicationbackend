@@ -108,4 +108,16 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
            "WHERE m.groupId = :teamId AND m.type = 'TEAM' AND m.timestamp > :clearedAt ORDER BY m.timestamp ASC")
     List<ChatMessage> findTeamChatMessagesAfter(@Param("teamId") String teamId,
                                                 @Param("clearedAt") LocalDateTime clearedAt);
+    
+    
+    @Query("SELECT COUNT(m) FROM ChatMessage m " +
+    	       "WHERE m.groupId = :groupId AND m.type = 'TEAM' AND m.sender <> :userId " +
+    	       "AND m.timestamp > :clearedAt " +
+    	       "AND m.id NOT IN (" +
+    	       "  SELECT mrs.chatMessage.id FROM MessageReadStatus mrs " +
+    	       "  WHERE mrs.userId = :userId AND mrs.chatMessage.groupId = :groupId" +
+    	       ")")
+    	long countUnreadMessagesForUserInGroup(@Param("userId") String userId,
+    	                                       @Param("groupId") String groupId,
+    	                                       @Param("clearedAt") LocalDateTime clearedAt);
 }

@@ -14,6 +14,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import com.app.chat_service.dto.EmployeeDTO;
 import com.app.chat_service.dto.EmployeeTeamResponse;
+import com.app.chat_service.dto.MessageStatusUpdateDTO;
 import com.app.chat_service.dto.TeamResponse;
 import com.app.chat_service.model.ChatMessage;
 import com.app.chat_service.model.MessageReadStatus;
@@ -59,13 +60,12 @@ public class ChatMessageService {
         for (String otherId : privateChatIds) {
             try {
                 // ✅ Skip invalid/system IDs
-            	  if (otherId == null || otherId.isBlank() ||
-            	            "pin".equalsIgnoreCase(otherId) ||
-            	            "deleteforeveryone".equalsIgnoreCase(otherId) ||
-            	            "edit".equalsIgnoreCase(otherId)) {
-
-            	            continue;
-            	        }
+                if (otherId == null || otherId.isBlank() ||
+                        "pin".equalsIgnoreCase(otherId) ||
+                        "deleteforeveryone".equalsIgnoreCase(otherId) ||
+                        "edit".equalsIgnoreCase(otherId)) {
+                    continue;
+                }
 
                 ResponseEntity<EmployeeDTO> response = allEmployees.getEmployeeById(otherId);
 
@@ -87,20 +87,17 @@ public class ChatMessageService {
 
     private Map<String, Object> buildGroupPreview(TeamResponse team, String employeeId) {
         LocalDateTime clearedAt = clearedChatService.getClearedAt(employeeId, team.getTeamId());
-        List<ChatMessage> allMessages = chatRepo.findByGroupIdAndType(team.getTeamId(), "TEAM");
-        List<ChatMessage> messagesAfterClear = allMessages.stream()
+
+        // Fetch only messages after the chat was cleared for last message preview
+        List<ChatMessage> messagesAfterClear = chatRepo.findByGroupIdAndType(team.getTeamId(), "TEAM")
+                .stream()
                 .filter(msg -> msg.getTimestamp().isAfter(clearedAt))
                 .collect(Collectors.toList());
-
         ChatMessage lastMessage = getLastMessage(messagesAfterClear);
 
-        long unreadCount = 0;
-        if (!chatPresenceTracker.isChatWindowOpen(employeeId, team.getTeamId())) {
-            Set<Long> readMessageIds = readStatusRepo.findReadMessageIdsByUserIdAndGroupId(employeeId, team.getTeamId());
-            unreadCount = messagesAfterClear.stream()
-                    .filter(msg -> !employeeId.equals(msg.getSender()) && !readMessageIds.contains(msg.getId()))
-                    .count();
-        }
+        // Use the new query directly for unread count
+        // This gives accurate count and also fixes refresh bug
+        long unreadCount = chatRepo.countUnreadMessagesForUserInGroup(employeeId, team.getTeamId(), clearedAt);
 
         Map<String, Object> groupChat = new HashMap<>();
         groupChat.put("chatType", "GROUP");
@@ -122,51 +119,50 @@ public class ChatMessageService {
     }
 
     private Map<String, Object> buildPrivatePreview(EmployeeTeamResponse emp, String employeeId) {
-    String chatPartnerId = emp.getEmployeeId();
-    LocalDateTime clearedAt = clearedChatService.getClearedAt(employeeId, chatPartnerId);
+        String chatPartnerId = emp.getEmployeeId();
+        LocalDateTime clearedAt = clearedChatService.getClearedAt(employeeId, chatPartnerId);
 
-    // ✅ Fetch only messages after chat was cleared
-    List<ChatMessage> allMessages = chatRepo.findBySenderAndReceiverOrReceiverAndSender(
-            employeeId, chatPartnerId, employeeId, chatPartnerId)
-            .stream()
-            .filter(m -> "PRIVATE".equalsIgnoreCase(m.getType()) && m.getTimestamp().isAfter(clearedAt))
-            .collect(Collectors.toList());
+        // ✅ Fetch only messages after chat was cleared
+        List<ChatMessage> allMessages = chatRepo.findBySenderAndReceiverOrReceiverAndSender(
+                employeeId, chatPartnerId, employeeId, chatPartnerId)
+                .stream()
+                .filter(m -> "PRIVATE".equalsIgnoreCase(m.getType()) && m.getTimestamp().isAfter(clearedAt))
+                .collect(Collectors.toList());
 
-    // ✅ Unread count calculation (only messages after clear + not read + not sent by me)
-    long unreadCount = allMessages.stream()
-            .filter(m -> !m.isRead() && !m.getSender().equals(employeeId))
-            .count();
+        // ✅ Unread count calculation (only messages after clear + not read + not sent by me)
+        long unreadCount = allMessages.stream()
+                .filter(m -> !m.isRead() && !m.getSender().equals(employeeId))
+                .count();
 
-    if (chatPresenceTracker.isChatWindowOpen(employeeId, chatPartnerId)) {
-        // reset unread if window is already open
-        markMessagesAsRead(employeeId, chatPartnerId);
-        unreadCount = 0;
+        if (chatPresenceTracker.isChatWindowOpen(employeeId, chatPartnerId)) {
+            // Reset unread if window is already open
+            markMessagesAsRead(employeeId, chatPartnerId);
+            unreadCount = 0;
+        }
+
+        // ✅ Last message after clear
+        Optional<ChatMessage> lastMsgOpt = allMessages.stream()
+                .max(Comparator.comparing(ChatMessage::getTimestamp));
+
+        Map<String, Object> privateChat = new HashMap<>();
+        privateChat.put("chatType", "PRIVATE");
+        privateChat.put("chatId", chatPartnerId);
+        privateChat.put("employeeName", emp.getDisplayName());
+
+        if (lastMsgOpt.isPresent()) {
+            ChatMessage lastMessage = lastMsgOpt.get();
+            privateChat.put("lastMessage", lastMessage.getContent());
+            privateChat.put("lastSeen", lastMessage.getTimestamp());
+        } else {
+            privateChat.put("lastMessage", "Chat cleared");
+            privateChat.put("lastSeen", clearedAt);
+        }
+
+        privateChat.put("profile", "https://example.com/profiles/" + chatPartnerId + ".jpg");
+        privateChat.put("unreadMessageCount", unreadCount);
+        privateChat.put("isOnline", onlineUserService.isOnline(chatPartnerId));
+        return privateChat;
     }
-
-    // ✅ Last message after clear
-    Optional<ChatMessage> lastMsgOpt = allMessages.stream()
-            .max(Comparator.comparing(ChatMessage::getTimestamp));
-
-    Map<String, Object> privateChat = new HashMap<>();
-    privateChat.put("chatType", "PRIVATE");
-    privateChat.put("chatId", chatPartnerId);
-    privateChat.put("employeeName", emp.getDisplayName());
-
-    if (lastMsgOpt.isPresent()) {
-        ChatMessage lastMessage = lastMsgOpt.get();
-        privateChat.put("lastMessage", lastMessage.getContent());
-        privateChat.put("lastSeen", lastMessage.getTimestamp());
-    } else {
-        privateChat.put("lastMessage", "Chat cleared");
-        privateChat.put("lastSeen", clearedAt);
-    }
-
-    privateChat.put("profile", "https://example.com/profiles/" + chatPartnerId + ".jpg");
-    privateChat.put("unreadMessageCount", unreadCount);
-    privateChat.put("isOnline", onlineUserService.isOnline(chatPartnerId));
-    return privateChat;
-}
-
 
     private ChatMessage getLastMessage(List<ChatMessage> messages) {
         return messages.stream()
@@ -205,6 +201,20 @@ public class ChatMessageService {
             messagesToUpdate.forEach(message -> message.setRead(true));
             chatRepo.saveAll(messagesToUpdate);
         }
+
+        List<Long> messageIds = messagesToUpdate.stream()
+                .map(ChatMessage::getId)
+                .collect(Collectors.toList());
+
+        MessageStatusUpdateDTO statusUpdate = MessageStatusUpdateDTO.builder()
+                .type("STATUS_UPDATE")
+                .status("SEEN")
+                .chatId(userId)
+                .messageIds(messageIds)
+                .build();
+
+        messagingTemplate.convertAndSendToUser(chatPartnerId, "/queue/private", statusUpdate);
+        log.info("Sent SEEN status update for {} messages to sender {}", messageIds.size(), chatPartnerId);
 
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override

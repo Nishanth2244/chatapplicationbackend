@@ -3,6 +3,7 @@ package com.app.chat_service.controller;
 import com.app.chat_service.dto.ChatMessageRequest;
 import com.app.chat_service.dto.ClearChatRequest;
 import com.app.chat_service.dto.ReplyForwardMessageDTO;
+import com.app.chat_service.dto.TypingStatusDTO;
 import com.app.chat_service.kakfa.ChatKafkaProducer;
 import com.app.chat_service.model.ChatMessage;
 import com.app.chat_service.repo.ChatMessageRepository;
@@ -177,4 +178,22 @@ public class WebSocketChatController {
                 )
         );
     }
+    
+    /**
+     * Handles typing status updates from clients.
+     */
+    @MessageMapping("/chat/typing")
+    public void handleTypingStatus(@Payload TypingStatusDTO dto) {
+        log.info("Typing status received: {}", dto);
+ 
+        if ("PRIVATE".equalsIgnoreCase(dto.getType())) {
+            // Private chat: send to the specific receiver's queue
+            messagingTemplate.convertAndSendToUser(dto.getReceiverId(),"/queue/typing-status",dto );
+                    
+        } else if ("TEAM".equalsIgnoreCase(dto.getType()) || "DEPARTMENT".equalsIgnoreCase(dto.getType())) {
+        	// Group chat: broadcast to the group's topic
+        	messagingTemplate.convertAndSend("/topic/typing-status/" + dto.getGroupId(),dto);
+        }
+    }
+
 }

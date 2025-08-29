@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> {
 
@@ -120,4 +121,30 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
     	long countUnreadMessagesForUserInGroup(@Param("userId") String userId,
     	                                       @Param("groupId") String groupId,
     	                                       @Param("clearedAt") LocalDateTime clearedAt);
+    
+    
+    @Query("SELECT DISTINCT m.receiver FROM ChatMessage m WHERE m.sender = :employeeId AND m.receiver IS NOT NULL")
+    Set<String> findDistinctReceiversBySender(@Param("employeeId") String employeeId);
+
+    @Query("SELECT DISTINCT m.sender FROM ChatMessage m WHERE m.receiver = :employeeId AND m.sender IS NOT NULL")
+    Set<String> findDistinctSendersByReceiver(@Param("employeeId") String employeeId);
+    
+
+//    UNREAD MESSAGE COUNT AFTER THE CHAT CLEARED IN PRIVATE
+    @Query("SELECT COUNT(m) FROM ChatMessage m WHERE m.receiver = :userId AND m.sender = :chatPartnerId AND m.read = false AND m.timestamp > :clearedAt AND m.type = 'PRIVATE'")
+    long countUnreadPrivateMessages(@Param("userId") String userId, @Param("chatPartnerId") String chatPartnerId, @Param("clearedAt") LocalDateTime clearedAt);
+
+    Optional<ChatMessage> findTopByGroupIdAndTypeAndTimestampAfterOrderByTimestampDesc(
+            String groupId,
+            String type,
+            LocalDateTime timestamp
+    );
+    
+    Optional<ChatMessage> findTopBySenderAndReceiverOrReceiverAndSenderOrderByTimestampDesc(
+            String sender,
+            String receiver,
+            String receiver2,
+            String sender2
+    );
 }
+

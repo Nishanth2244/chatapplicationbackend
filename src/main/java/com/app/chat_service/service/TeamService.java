@@ -36,7 +36,7 @@ public class TeamService {
     /** Get all teams where an employee belongs */
     public List<TeamResponse> getTeamsByEmployeeId(String employeeId) {
         try {
-            ResponseEntity<List<TeamResponse>> response = employeeClient.getTeamsByEmployeeId(employeeId);
+            ResponseEntity<List<TeamResponse>> response = employeeClient.getTeamAllEmployees(employeeId);
             return response.getBody() != null ? response.getBody() : Collections.emptyList();
         } catch (Exception e) {
             return Collections.emptyList();
@@ -46,7 +46,7 @@ public class TeamService {
     /** Get all employees in all teams of a given employee */
     public List<TeamResponse> getEmployeesInAllTeamsOf(String employeeId) {
         try {
-            ResponseEntity<List<TeamResponse>> response = employeeClient.getTeamsByEmployeeId(employeeId);
+            ResponseEntity<List<TeamResponse>> response = employeeClient.getTeamAllEmployees(employeeId);
             return response.getBody() != null ? response.getBody() : Collections.emptyList();
         } catch (Exception e) {
             return Collections.emptyList();
@@ -97,7 +97,7 @@ public class TeamService {
     public ResponseEntity<List<TeamResponse>> ByEmpId(String employeeId) {
         try {
             // Call Feign client directly
-            ResponseEntity<List<TeamResponse>> response = employeeClient.getTeamsByEmployeeId(employeeId);
+            ResponseEntity<List<TeamResponse>> response = employeeClient.getTeamAllEmployees(employeeId);
             if (response.getStatusCode().is2xxSuccessful()) {
                 return ResponseEntity.ok(response.getBody() != null ? response.getBody() : Collections.emptyList());
             } else {

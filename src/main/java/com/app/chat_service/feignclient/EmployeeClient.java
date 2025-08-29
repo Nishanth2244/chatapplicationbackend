@@ -11,21 +11,22 @@ import com.app.chat_service.dto.EmployeeDTO;
 import com.app.chat_service.dto.EmployeeDepartmentDTO;
 import com.app.chat_service.dto.TeamResponse;
 
-@FeignClient(name = "employee-client", url = "http://localhost:8080")
+@FeignClient(name = "employee-client", url = "http://192.168.0.123:8090/api/employee/")
 public interface EmployeeClient {
 
-    @GetMapping("/api/all/departments")
+    @GetMapping("all/departments")
     List<DepartmentDTO> getAllDepartments();
 
-    @GetMapping("/api/department/{departmentId}/employees")
+    @GetMapping("department/{departmentId}/employees")
     ResponseEntity<EmployeeDepartmentDTO> getEmployeesByDepartmentId(@PathVariable("departmentId") String departmentId);
 
-    @GetMapping("/api/employee/{id}")
+    @GetMapping("{id}")
     ResponseEntity<EmployeeDTO> getEmployeeById(@PathVariable("id") String id);
 
-    @GetMapping("/api/team/employee/{teamId}")
+    @GetMapping("team/{teamId}")
     ResponseEntity<List<TeamResponse>> getTeamById(@PathVariable("teamId") String teamId);
 
-    @GetMapping("/api/employee/team/{employeeId}")
-    ResponseEntity<List<TeamResponse>> getTeamsByEmployeeId(@PathVariable("employeeId") String employeeId); // ✅ FIXED
+    @GetMapping("team/{employeeId}")
+    ResponseEntity<List<TeamResponse>> getTeamAllEmployees(@PathVariable("employeeId") String employeeId); 
+
 }

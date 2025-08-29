@@ -17,5 +17,6 @@ public class EmployeeTeamResponse {
     private String workEmail;
     private String workNumber;
     private String employeeImage;
+    private String profilelink;
 
 }

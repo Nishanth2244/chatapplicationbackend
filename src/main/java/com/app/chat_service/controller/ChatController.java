@@ -1,6 +1,6 @@
 package com.app.chat_service.controller;
 
-import java.util.List;
+import java.util.*;
 import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
@@ -10,6 +10,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -26,6 +27,7 @@ import com.app.chat_service.dto.TeamResponse;
 import com.app.chat_service.dto.TypingStatusDTO;
 import com.app.chat_service.feignclient.EmployeeClient;
 import com.app.chat_service.model.ChatMessage;
+import com.app.chat_service.model.employee_details;
 import com.app.chat_service.repo.ChatMessageRepository;
 import com.app.chat_service.service.AllDeptService;
 import com.app.chat_service.service.AllEmployees;
@@ -34,6 +36,7 @@ import com.app.chat_service.service.ChatMessageService;
 import com.app.chat_service.service.ChatService;
 import com.app.chat_service.service.DepartmentByIdService;
 import com.app.chat_service.service.EmployeeByTeamId;
+import com.app.chat_service.service.EmployeeDetailsService;
 import com.app.chat_service.service.TeamService;
 
 import lombok.RequiredArgsConstructor;
@@ -56,7 +59,7 @@ public class ChatController {
     private final SimpMessagingTemplate messagingTemplate;
     private final ChatMessageOverviewService chatMessageOverviewService;
     private final ChatMessageRepository chatMessageRepository;
-    
+    private final EmployeeDetailsService employeeDetailsService;   
     /** Fetch messages between employee and chatId (could be private or group) */
     @GetMapping("/{empId}/{chatId}")
     public ResponseEntity<List<ChatMessageOverviewDTO>> getChatMessages(
@@ -143,7 +146,7 @@ public class ChatController {
 
     /** Teams for an Employee */
     @GetMapping("/employee/team/{employeeId}")
-    public ResponseEntity<List<TeamResponse>> getAllEmployees(@PathVariable("employeeId") String employeeId) {
+    public ResponseEntity<List<TeamResponse>> getTeamsByEmpId(@PathVariable("employeeId") String employeeId) {
         return teamService.ByEmpId(employeeId);
     }
 
@@ -178,4 +181,24 @@ public class ChatController {
         chatMessageService.broadcastGroupChatOverview(teamId);
         return ResponseEntity.ok().build();
     }
+    
+    @PostMapping("/employee/add")
+    public void addEmployee(@RequestBody List<employee_details> employee_details_all) {
+    	 for(employee_details i : employee_details_all ) {
+    		 employeeDetailsService.addEmployee(i);
+    	 }
+    }
+    
+    @PutMapping("/employee/update/{employeeId}")
+    public employee_details empupdate(
+    		@PathVariable String employeeId,
+    		@RequestBody employee_details updateDetails) {
+    	
+    	employee_details emp=employeeDetailsService.updateEmployee(employeeId, updateDetails);
+    	return emp;
+    			}
+    
+     
 }
+    
+   

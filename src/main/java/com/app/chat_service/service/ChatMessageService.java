@@ -81,8 +81,7 @@ public class ChatMessageService {
 	
 	        EmployeeTeamResponse emp = new EmployeeTeamResponse();
 	        emp.setEmployeeId(response.getEmployeeId());
-	        emp.setDisplayName(response.getEmployeeName());
-	        emp.setProfilelink(response.getProfileLink());
+	        emp.setDisplayName(response.getEmployeeName());	        emp.setProfilelink(response.getProfileLink());
 	        allChats.add(buildPrivatePreview(emp, employeeId));
 	        log.info("profile link {}",response.getProfileLink());
 	        log.info("done");
@@ -111,6 +110,8 @@ public class ChatMessageService {
         if (lastMessage != null) {
             groupChat.put("lastMessage", lastMessage.getContent());
             groupChat.put("lastSeen", lastMessage.getTimestamp());
+            groupChat.put("LastMessageSenderId", lastMessage.getSender());
+            groupChat.put("lastMessageType", lastMessage.getType());
         } else {
             groupChat.put("lastMessage", "Chat cleared");
             groupChat.put("lastSeen", clearedAt);
@@ -125,39 +126,36 @@ public class ChatMessageService {
     private Map<String, Object> buildPrivatePreview(EmployeeTeamResponse emp, String employeeId) {
         String chatPartnerId = emp.getEmployeeId();
         LocalDateTime clearedAt = clearedChatService.getClearedAt(employeeId, chatPartnerId);
-
-//        Fetches Unread Message Count in Private Chat
+     
+        Optional<ChatMessage> lastMsgOpt = chatRepo.findTopByTypeAndSenderInAndReceiverInAndTimestampAfterOrderByTimestampDesc(
+                "PRIVATE",
+                List.of(employeeId, chatPartnerId),
+                List.of(employeeId, chatPartnerId),
+                clearedAt
+        );
+     
         long unreadCount = chatRepo.countUnreadPrivateMessages(employeeId, chatPartnerId, clearedAt);
-
-//		Fetches Last Message B/W two users in Private Chat
-        Optional<ChatMessage> lastMsgOpt = chatRepo.findTopBySenderAndReceiverOrReceiverAndSenderOrderByTimestampDesc(
-                employeeId, chatPartnerId, chatPartnerId, employeeId);
-
         if (chatPresenceTracker.isChatWindowOpen(employeeId, chatPartnerId)) {
-            // Reset unread if window is already open
             markMessagesAsRead(employeeId, chatPartnerId);
             unreadCount = 0;
         }
-
-        // ✅ Last message after clear
-        if (lastMsgOpt.isPresent() && lastMsgOpt.get().getTimestamp().isBefore(clearedAt)) {
-            lastMsgOpt = Optional.empty();
-        }
-
+     
         Map<String, Object> privateChat = new HashMap<>();
         privateChat.put("chatType", "PRIVATE");
         privateChat.put("chatId", chatPartnerId);
         privateChat.put("employeeName", emp.getDisplayName());
-
+     
         if (lastMsgOpt.isPresent()) {
             ChatMessage lastMessage = lastMsgOpt.get();
             privateChat.put("lastMessage", lastMessage.getContent());
             privateChat.put("lastSeen", lastMessage.getTimestamp());
+            privateChat.put("lastMessageSenderId", lastMessage.getSender());
+            privateChat.put("lastMessageType", lastMessage.getType());  
         } else {
             privateChat.put("lastMessage", "Chat cleared");
             privateChat.put("lastSeen", clearedAt);
         }
-
+     
         privateChat.put("profile", emp.getProfilelink());
         privateChat.put("unreadMessageCount", unreadCount);
         privateChat.put("isOnline", onlineUserService.isOnline(chatPartnerId));

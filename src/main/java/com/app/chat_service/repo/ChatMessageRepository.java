@@ -146,5 +146,13 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
             String receiver2,
             String sender2
     );
+    
+    
+    Optional<ChatMessage> findTopByTypeAndSenderInAndReceiverInAndTimestampAfterOrderByTimestampDesc(
+    	    String type,
+    	    List<String> senders,
+    	    List<String> receivers,
+    	    LocalDateTime timestamp
+    	);
 }
 

@@ -1,11 +1,9 @@
 package com.app.chat_service.controller;
 
-import java.util.*;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.messaging.handler.annotation.MessageMapping;
-import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,7 +22,6 @@ import com.app.chat_service.dto.EmployeeDTO;
 import com.app.chat_service.dto.EmployeeDepartmentDTO;
 import com.app.chat_service.dto.GroupChatDetailsResponse;
 import com.app.chat_service.dto.TeamResponse;
-import com.app.chat_service.dto.TypingStatusDTO;
 import com.app.chat_service.feignclient.EmployeeClient;
 import com.app.chat_service.model.ChatMessage;
 import com.app.chat_service.model.employee_details;

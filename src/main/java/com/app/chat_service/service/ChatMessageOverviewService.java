@@ -1,5 +1,5 @@
 package com.app.chat_service.service;
- 
+
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -17,31 +17,31 @@ import com.app.chat_service.repo.ChatMessageRepository;
 import com.app.chat_service.repo.MessageActionRepository;
 
 import lombok.RequiredArgsConstructor;
- 
+
 @Service
 @RequiredArgsConstructor
 public class ChatMessageOverviewService {
- 
+
     private final ChatMessageRepository chatMessageRepository;
     private final MessageActionRepository messageActionRepository;
-    // Ee kotha service ni inject chesanu
+    // Injected this service here
     private final ClearedChatService clearedChatService;
- 
+
     @Transactional(readOnly = true)
     public List<ChatMessageOverviewDTO> getChatMessages(String empId, String chatId) {
        
-        // Chat clear chesina time ni theesukuntunnam
+        // Fetch the time when the chat was cleared
         LocalDateTime clearedAt = clearedChatService.getClearedAt(empId, chatId);
- 
+
         List<ChatMessage> messages;
         if (isTeamId(chatId)) {
-            // Paatha method badulu, ee kotha method ni use chesthunnam
+            // Instead of old method, using this new method
             messages = chatMessageRepository.findTeamChatMessagesAfter(chatId, clearedAt);
         } else {
-            // Paatha method badulu, ee kotha method ni use chesthunnam
+            // Instead of old method, using this new method
             messages = chatMessageRepository.findPrivateChatMessagesAfter(empId, chatId, clearedAt);
         }
- 
+
         List<Long> messageIds = messages.stream()
                 .map(ChatMessage::getId)
                 .collect(Collectors.toList());
@@ -50,8 +50,10 @@ public class ChatMessageOverviewService {
         Set<Long> hiddenMessageIds = actions.stream()
                 .map(MessageAction::getMessageId)
                 .collect(Collectors.toSet());
+
         DateTimeFormatter timeFmt = DateTimeFormatter.ofPattern("hh:mm a");
         DateTimeFormatter dateFmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
         return messages.stream()
             .filter(msg -> !hiddenMessageIds.contains(msg.getId()))
             .map(msg -> {
@@ -72,8 +74,7 @@ public class ChatMessageOverviewService {
                         .type(originalMessageType)
                         .build();
                 }
- 
-                // ======================= REFRESH BUG FIX START =======================
+
                 return ChatMessageOverviewDTO.builder()
                     .messageId(msg.getId())
                     .time(msg.getTimestamp() != null ? msg.getTimestamp().format(timeFmt) : null)
@@ -92,15 +93,14 @@ public class ChatMessageOverviewService {
                     .forwarded(msg.getForwarded())
                     .forwardedFrom(msg.getForwardedFrom())
                     .build();
-                // ======================= REFRESH BUG FIX END =========================
             })
             .collect(Collectors.toList());
     }
- 
+
     private boolean isTeamId(String chatId) {
         return chatId != null && chatId.toUpperCase().startsWith("TEAM");
     }
- 
+
     private String resolveKind(ChatMessage msg) {
         if (msg.isDeleted()) {
              return "deleted";
@@ -116,11 +116,9 @@ public class ChatMessageOverviewService {
         }
         return "text";
     }
- 
+
     private String extractActualContent(String content) {
         if (content == null) return "";
         return content;
     }
 }
- 
- 

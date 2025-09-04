@@ -19,7 +19,7 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
-
+import org.springframework.transaction.annotation.Transactional;
 import java.security.Principal;
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -85,6 +85,7 @@ public class WebSocketChatController {
 
     // Send chat message (with ACK)
     @MessageMapping("/chat/send")
+    @Transactional
     public void handleMessage(@Payload ChatMessageRequest request) {
         log.info("➡️ Message received in backend: {}", request);
 

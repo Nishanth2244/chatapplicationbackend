@@ -11,7 +11,7 @@ import java.util.concurrent.Executor;
 @EnableAsync // This ensures the feature is turned on
 public class AsyncConfig {
 
-    @Bean(name = "taskExecutor")
+    @Bean(name = "asyncTaskExecutor")
     public Executor asyncTaskExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(10); // Start with 5 threads

@@ -2,10 +2,13 @@ package com.app.chat_service.service;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,19 +31,21 @@ public class ChatMessageOverviewService {
     private final ClearedChatService clearedChatService;
 
     @Transactional(readOnly = true)
-    public List<ChatMessageOverviewDTO> getChatMessages(String empId, String chatId) {
-       
-        // Fetch the time when the chat was cleared
+    public List<ChatMessageOverviewDTO> getChatMessages(String empId, String chatId, Pageable pageable) {
         LocalDateTime clearedAt = clearedChatService.getClearedAt(empId, chatId);
-
-        List<ChatMessage> messages;
+     
+        Page<ChatMessage> messagesPage;
         if (isTeamId(chatId)) {
-            // Instead of old method, using this new method
-            messages = chatMessageRepository.findTeamChatMessagesAfter(chatId, clearedAt);
+            messagesPage = chatMessageRepository.findTeamChatMessagesAfter(chatId, clearedAt, pageable);
         } else {
-            // Instead of old method, using this new method
-            messages = chatMessageRepository.findPrivateChatMessagesAfter(empId, chatId, clearedAt);
+            messagesPage = chatMessageRepository.findPrivateChatMessagesAfter(empId, chatId, clearedAt, pageable);
         }
+     
+        if (messagesPage == null || !messagesPage.hasContent()) {
+            return Collections.emptyList();
+        }
+     
+        List<ChatMessage> messages = messagesPage.getContent();
 
         List<Long> messageIds = messages.stream()
                 .map(ChatMessage::getId)

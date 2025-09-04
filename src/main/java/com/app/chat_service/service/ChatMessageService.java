@@ -1,16 +1,17 @@
 package com.app.chat_service.service;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Async;
@@ -47,46 +48,63 @@ public class ChatMessageService {
     private final EmployeeDetailsService employeeDetailsService;
     
     
-    public List<Map<String, Object>> getChattedEmployeesInSameTeam(String employeeId) {
-        List<Map<String, Object>> allChats = new ArrayList<>();
-        
-        // ✅ Add groups
+    public List<Map<String, Object>> getChattedEmployeesInSameTeam(String employeeId, int page, int size) {
+        // 1. Fetch all groups and create previews
         List<TeamResponse> teams = Optional.ofNullable(teamService.getTeamsByEmployeeId(employeeId))
                 .orElse(Collections.emptyList());
-        for (TeamResponse team : teams) {
-            allChats.add(buildGroupPreview(team, employeeId));
-        }
-        
-
+        List<Map<String, Object>> groupChats = teams.stream()
+                .map(team -> buildGroupPreview(team, employeeId))
+                .collect(Collectors.toList());
+        log.info("Step 1");
+     
+        // 2. Fetch all unique private chat partners
         Set<String> privateChatIds = new HashSet<>();
         privateChatIds.addAll(chatRepo.findDistinctReceiversBySender(employeeId));
         privateChatIds.addAll(chatRepo.findDistinctSendersByReceiver(employeeId));
-
-        // remove self
         privateChatIds.remove(employeeId);
-        
-        log.info("Step 1");
-
-        for (String otherId : privateChatIds) {
-                // ✅ Skip invalid/system IDs
-	        if (otherId == null || otherId.isBlank() ||
-	                "pin".equalsIgnoreCase(otherId) ||
-	                "deleteforeveryone".equalsIgnoreCase(otherId) ||
-	                "edit".equalsIgnoreCase(otherId)) {
-	        	log.info("Step 2");
-	            continue;
-	        }
-	
-	        employee_details response = employeeDetailsService.getEmployeeById(otherId);
-	
-	        EmployeeTeamResponse emp = new EmployeeTeamResponse();
-	        emp.setEmployeeId(response.getEmployeeId());
-	        emp.setDisplayName(response.getEmployeeName());	        emp.setProfilelink(response.getProfileLink());
-	        allChats.add(buildPrivatePreview(emp, employeeId));
-	        log.info("profile link {}",response.getProfileLink());
-	        log.info("done");
-	        }
-        return allChats;
+     
+        log.info("Step 2");
+        // 3. Create previews for all private chats
+        List<Map<String, Object>> privateChats = privateChatIds.stream()
+                .map(otherId -> {
+                    if (otherId == null || otherId.isBlank() || "pin".equalsIgnoreCase(otherId) || "deleteforeveryone".equalsIgnoreCase(otherId) || "edit".equalsIgnoreCase(otherId)) {
+                        return null;
+                    }
+                    employee_details response = employeeDetailsService.getEmployeeById(otherId);
+                    if (response == null) return null;
+     
+                    EmployeeTeamResponse emp = new EmployeeTeamResponse();
+                    emp.setEmployeeId(response.getEmployeeId());
+                    emp.setDisplayName(response.getEmployeeName());
+                    emp.setProfilelink(response.getProfileLink());
+                    return buildPrivatePreview(emp, employeeId);
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+        log.info("Done")
+        ;
+        // 4. Combine both lists into one
+        List<Map<String, Object>> allChats = Stream.concat(groupChats.stream(), privateChats.stream())
+                .collect(Collectors.toList());
+     
+        // 5. Sort the entire combined list by the last message timestamp (newest first)
+        allChats.sort(Comparator.comparing((Map<String, Object> chat) -> {
+            Object lastSeen = chat.get("lastSeen");
+            if (lastSeen instanceof LocalDateTime) {
+                return (LocalDateTime) lastSeen;
+            }
+            return LocalDateTime.MIN; // Put chats with no messages at the end
+        }).reversed());
+     
+        // 6. Apply manual pagination to the final sorted list
+        int start = page * size;
+        int end = Math.min(start + size, allChats.size());
+     
+        if (start >= allChats.size()) {
+            return Collections.emptyList(); // Return empty list if page number is out of bounds
+        }
+     
+        return allChats.subList(start, end);
     }
 
     private Map<String, Object> buildGroupPreview(TeamResponse team, String employeeId) {
@@ -170,11 +188,12 @@ public class ChatMessageService {
 
     public void broadcastChatOverview(String employeeId) {
         log.info("Broadcasting chat overview for user: {}", employeeId);
-        List<Map<String, Object>> overview = getChattedEmployeesInSameTeam(employeeId);
+        List<Map<String, Object>> overview = getChattedEmployeesInSameTeam(employeeId, 0, 15); 
         messagingTemplate.convertAndSendToUser(employeeId, "/queue/sidebar", overview);
     }
 
-    @Async("taskExecutor")
+
+    @Async("asyncTaskExecutor")
     public void broadcastOverviewAsynchronously(String senderId, String receiverId, String groupId, String type) {
         broadcastChatOverview(senderId);
         if ("PRIVATE".equalsIgnoreCase(type) && receiverId != null) {

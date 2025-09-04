@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheConfig;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -19,7 +20,6 @@ import com.app.chat_service.model.ChatMessage;
 import com.app.chat_service.repo.ChatMessageRepository;
 
 @Service
-@CacheConfig(cacheNames = "chatHistory")
 public class ChatService {
 
     @Autowired
@@ -34,7 +34,7 @@ public class ChatService {
     private SimpMessagingTemplate messagingTemplate;
     @Autowired
     private ChatKafkaProducer kafkaProducer;
-
+    
     public String sendMessage(ChatMessageRequest request) {
         String type = request.getType() != null ? request.getType().toUpperCase() : "";
         String senderId = request.getSender();

@@ -11,7 +11,7 @@ import com.app.chat_service.dto.EmployeeDTO;
 import com.app.chat_service.dto.EmployeeDepartmentDTO;
 import com.app.chat_service.dto.TeamResponse;
 
-@FeignClient(name = "employee-client", url = "http://192.168.0.123:8090/api/employee/")
+@FeignClient(name = "employee-client", url = "http://hrms.anasolconsultancyservices.com/api/employee/")
 public interface EmployeeClient {
 
     @GetMapping("all/departments")

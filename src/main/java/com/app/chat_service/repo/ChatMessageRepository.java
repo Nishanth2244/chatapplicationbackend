@@ -1,6 +1,9 @@
 package com.app.chat_service.repo;
 
 import com.app.chat_service.model.ChatMessage;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -100,15 +103,17 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
 
     @Query("SELECT m FROM ChatMessage m " +
            "WHERE ((m.sender = :empId AND m.receiver = :chatId) OR (m.sender = :chatId AND m.receiver = :empId)) " +
-           "AND m.type = 'PRIVATE' AND m.timestamp > :clearedAt ORDER BY m.timestamp ASC")
-    List<ChatMessage> findPrivateChatMessagesAfter(@Param("empId") String empId,
+           "AND m.type = 'PRIVATE' AND m.timestamp > :clearedAt")
+    Page<ChatMessage> findPrivateChatMessagesAfter(@Param("empId") String empId,
                                                    @Param("chatId") String chatId,
-                                                   @Param("clearedAt") LocalDateTime clearedAt);
+                                                   @Param("clearedAt") LocalDateTime clearedAt,
+                                                   Pageable pageable);
 
     @Query("SELECT m FROM ChatMessage m " +
-           "WHERE m.groupId = :teamId AND m.type = 'TEAM' AND m.timestamp > :clearedAt ORDER BY m.timestamp ASC")
-    List<ChatMessage> findTeamChatMessagesAfter(@Param("teamId") String teamId,
-                                                @Param("clearedAt") LocalDateTime clearedAt);
+           "WHERE m.groupId = :teamId AND m.type = 'TEAM' AND m.timestamp > :clearedAt")
+    Page<ChatMessage> findTeamChatMessagesAfter(@Param("teamId") String teamId,
+                                                @Param("clearedAt") LocalDateTime clearedAt,
+                                                Pageable pageable);
     
     
     @Query("SELECT COUNT(m) FROM ChatMessage m " +
@@ -154,5 +159,6 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
     	    List<String> receivers,
     	    LocalDateTime timestamp
     	);
+    
 }
 

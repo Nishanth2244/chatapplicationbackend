@@ -1,8 +1,11 @@
 package com.app.chat_service.controller;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,9 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.app.chat_service.dto.ChatMessageOverviewDTO;
 import com.app.chat_service.dto.ChatMessageRequest;
 import com.app.chat_service.dto.ChatMessageResponse;
-import com.app.chat_service.dto.DepartmentDTO;
 import com.app.chat_service.dto.EmployeeDTO;
-import com.app.chat_service.dto.EmployeeDepartmentDTO;
 import com.app.chat_service.dto.GroupChatDetailsResponse;
 import com.app.chat_service.dto.TeamResponse;
 import com.app.chat_service.feignclient.EmployeeClient;
@@ -57,19 +58,31 @@ public class ChatController {
     private final ChatMessageOverviewService chatMessageOverviewService;
     private final ChatMessageRepository chatMessageRepository;
     private final EmployeeDetailsService employeeDetailsService;   
+    
+    
     /** Fetch messages between employee and chatId (could be private or group) */
     @GetMapping("/{empId}/{chatId}")
     public ResponseEntity<List<ChatMessageOverviewDTO>> getChatMessages(
             @PathVariable("empId") String empId,
-            @PathVariable("chatId") String chatId) {
-        List<ChatMessageOverviewDTO> messages = chatMessageOverviewService.getChatMessages(empId, chatId);
+            @PathVariable("chatId") String chatId,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "15") int size) {
+    	
+        org.springframework.data.domain.Pageable pageable = PageRequest.of(page, size, Sort.by("timestamp").descending());
+        
+        List<ChatMessageOverviewDTO> messages = chatMessageOverviewService.getChatMessages(empId, chatId, pageable);
+        
+        Collections.reverse(messages);
         return ResponseEntity.ok(messages);
     }
 
     /** Sidebar Overview (Private + Group Chats) */
     @GetMapping("/overview/{employeeId}")
-    public ResponseEntity<List<Map<String, Object>>> getChatOverview(@PathVariable("employeeId") String employeeId) {
-        List<Map<String, Object>> chatOverview = chatMessageService.getChattedEmployeesInSameTeam(employeeId);
+    public ResponseEntity<List<Map<String, Object>>> getChatOverview(
+            @PathVariable("employeeId") String employeeId,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size) {
+        List<Map<String, Object>> chatOverview = chatMessageService.getChattedEmployeesInSameTeam(employeeId, page, size);
         return ResponseEntity.ok(chatOverview);
     }
 
@@ -83,13 +96,6 @@ public class ChatController {
     @GetMapping("/team/{teamId}")
     public List<ChatMessageResponse> getTeamMessages(@PathVariable String teamId) {
         List<ChatMessage> messages = chatService.getTeamMessages(teamId);
-        return messages.stream().map(this::toResponse).toList();
-    }
-
-    /** Fetch all messages of a Department */
-    @GetMapping("/department/{deptId}")
-    public List<ChatMessageResponse> getDepartmentMessages(@PathVariable String deptId) {
-        List<ChatMessage> messages = chatService.getDepartmentMessages(deptId);
         return messages.stream().map(this::toResponse).toList();
     }
 
@@ -109,18 +115,6 @@ public class ChatController {
         return ResponseEntity.ok(messages.stream().map(this::toResponse).toList());
     }
 
-    /** Departments List */
-    @GetMapping("/all/departments")
-    public ResponseEntity<List<DepartmentDTO>> getAllDepartments() {
-        return allDeptService.getAllDepartments();
-    }
-
-    /** Employees by Department */
-    @GetMapping("/department/{departmentId}/employees")
-    public ResponseEntity<EmployeeDepartmentDTO> getEmployeesByDepartmentId(
-            @PathVariable("departmentId") String departmentId) {
-        return departmentByIdService.getEmployeesByDeptId(departmentId);
-    }
 
     /** Get Employee details */
     @GetMapping("/employee/{id}")

@@ -1,0 +1,143 @@
+
+replicaCount: 1
+
+microservice:
+  name: chat
+  namespace: hrms
+  port: 8083
+
+
+image:
+  repository: 435073375740.dkr.ecr.ap-south-1.amazonaws.com/hrms/chat
+  pullPolicy: IfNotPresent
+  tag: "v1.2.6"
+
+env:
+  SPRING_APPLICATION_NAME: chat-service
+
+  # Server
+  SERVER_PORT: 8083
+  SERVER_ADDRESS: 0.0.0.0
+
+  # Kafka / Broker
+  MESSAGE_MAX_BYTES: 52428800
+  REPLICA_FETCH_MAX_BYTES: 52428800
+
+  # PostgreSQL
+  POSTGRES_URL: jdbc:postgresql://chat-hrms.c3ykgskuuzr8.ap-south-1.rds.amazonaws.com:5432/postgres
+  POSTGRES_USERNAME: postgres
+  POSTGRES_PASSWORD: HrmAnasolDb
+  POSTGRES_DRIVER: org.postgresql.Driver
+  POSTGRES_DIALECT: org.hibernate.dialect.PostgreSQLDialect
+  POSTGRES_SCHEMA: chat
+
+  # Redis
+  # REDIS_HOST: localhost
+  # REDIS_PORT: 6379
+
+  DATA_REDIS_SENTINEL_MASTER: mymaster
+  DATA_REDIS_SENTINEL_NODES: my-redis.redis.svc.cluster.local:26379
+  DATA_REDIS_PASSWORD: RedisPasswordMaster
+
+  REDIS_CHAT_TOPIC: chat-messages
+
+  # Cache
+  CACHE_TYPE: redis
+  CACHE_REDIS_ENABLE_STATISTICS: true
+
+  # File Upload
+  PROJECT_IMAGE_DIR: images/
+  FILE_UPLOAD_DIR: uploads
+  MAX_FILE_SIZE: 50MB
+  MAX_REQUEST_SIZE: 50MB
+
+  CLOUD_AWS_REGION_STATIC: ap-south-1
+  CLOUD_AWS_S3_BUCKET: techlifeacs
+
+
+  SECURITY_ENABLED: false
+
+
+  LOG_LEVEL_KAFKA_CONSUMER: DEBUG
+  LOG_LEVEL_SPRING_KAFKA: DEBUG
+
+  HIKARI_AUTO_COMMIT: false
+
+
+  MANAGEMENT_ENDPOINTS_EXPOSURE: metrics,caches,health
+
+
+  HRMS_API_URL: https://hrms.anasolconsultancyservices.com
+
+
+
+
+envFromSecret:
+  CLOUD_AWS_CREDENTIALS_ACCESSKEY:
+    name: employee-aws-access
+    key: aws-access-key
+  CLOUD_AWS_CREDENTIALS_SECRETKEY:
+    name: employee-aws-access
+    key: aws-secret-key
+  
+
+resources: 
+  limits:
+    cpu: 1000m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+
+livenessProbe:
+  path: "actuator/health/liveness"
+  initialDelaySeconds: 180
+  periodSeconds: 10
+
+readinessProbe:
+  path: "actuator/health/readiness"
+  initialDelaySeconds: 150
+  periodSeconds: 10
+
+service:
+  type: NodePort
+  port: 80
+  nodePort: 30084
+
+gateway_service:
+  namespace: istio-gateway
+
+
+httprouts:
+  hostnames: ["hrms.anasolconsultancyservices.com"]
+  path: "/api/chat"
+  timeout_request: "3s"
+  retry_codes: [500, 502, 503, 504]
+  retry_attempts: 3
+  retry_backoff: "1s"
+
+serviceAccount:
+  annotations:
+    example.com/annotation: "value"
+  rules:
+    - apiGroups: [""]
+      resources: ["pods", "services", "endpoints"] 
+      verbs: ["get", "list", "watch"]
+
+argo_cd:
+  helm_url: 'https://koteshwarchinnolla.github.io/helm-utilities/charts'
+  chart_name: hrms-microservices
+  chart_version: 0.1.0
+  path_to_values: Chat/values.yaml
+  microservice_repo_url: 'https://github.com/KoteshwarChinnolla/TECHLIFE-BACKEND'
+  branch: main
+  destination_server: https://kubernetes.default.svc
+
+  # kubectl create secret tls cirtificate-hrms-secret  --cert=./tls.crt --key=./tls.key  -n istio-gateway
